@@ -7,9 +7,9 @@
                     "name": "India and South Asia (India",
                     "dataset": "common_voice"
                 },
-                "sin": {
-                    "name": "Singlish",
-                    "dataset": "miria_sin"
+                "ur": {
+                    "name": "Pakistan",
+                    "dataset": "common_voice"
                 },
                 "us": {
                     "name": "United States English",

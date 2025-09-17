@@ -1,0 +1,11 @@
+# Core
+datasets==3.6.0
+soundfile>=0.12.1
+numpy>=1.24
+scipy>=1.10
+tqdm>=4.66
+
+# Audio processing
+librosa>=0.10.1
+noisereduce>=3.0.0
+pydub>=0.25.1

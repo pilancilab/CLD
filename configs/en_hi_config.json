@@ -1,0 +1,34 @@
+{
+    "name": "en + hi binary dataset",
+    "languages": {
+        "en": {
+            "accents": {
+                "hi": {
+                    "dataset": "common_voice"
+                },
+                "sin": {
+                    "dataset": "miria_sin"
+                },
+                "us": {
+                    "dataset": "common_voice"
+                }
+            }
+        },
+        "hi": {
+            "accents": {
+                "hi": {
+                    "dataset": "lahaja"
+                },
+                "te": {
+                    "dataset": "lahaja"
+                },
+                "kok": {
+                    "dataset": "lahaja"
+                }
+            }
+        }
+    }, 
+    "params": {
+        "balanced_count": 500 
+    }
+}

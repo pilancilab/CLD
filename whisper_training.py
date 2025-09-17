@@ -77,14 +77,17 @@ class DataCollatorSpeechSeq2SeqWithPadding:
         # labels: already tokenized to "labels"
         label_features = [{"input_ids": f["labels"]} for f in features]
         labels_batch = self.processor.tokenizer.pad(label_features, return_tensors="pt")
-        
+
+        # replace padding with -100 to ignore loss correctly
         labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
-        
-        # If BOS is present at position 0, drop it (added later by model)
-        if labels.shape[1] > 0 and (labels[:, 0] == self.decoder_start_token_id).all().item():
+
+        # if bos token is appended in previous tokenization step,
+        # cut bos token here as it's append later anyways
+        if (labels[:, 0] == self.decoder_start_token_id).all().cpu().item():
             labels = labels[:, 1:]
-        
+
         batch["labels"] = labels
+
         return batch
 
 
@@ -92,81 +95,24 @@ class DataCollatorSpeechSeq2SeqWithPadding:
 # Dataset preparation
 # -----------------------
 
-def build_processor(model_id: str, default_language: Optional[str], task: str) -> WhisperProcessor:
-    # Feature extractor & tokenizer (you can set a default language; we still override per example)
-    feature_extractor = WhisperFeatureExtractor.from_pretrained(model_id)
-    tokenizer = WhisperTokenizer.from_pretrained(
-        model_id,
-        language=default_language if default_language else None,
-        task=task,
-    )
-    processor = WhisperProcessor.from_pretrained(
-        model_id,
-        language=default_language if default_language else None,
-        task=task,
-    )
-    return processor
-
-
-def build_language_processors(model_id: str, languages: List[str]) -> Dict[str, WhisperProcessor]:
-    """Create a cache of processors keyed by language code."""
-    processors_by_lang: Dict[str, WhisperProcessor] = {}
-    for lang in languages:
-        try:
-            processors_by_lang[lang] = WhisperProcessor.from_pretrained(
-                model_id,
-                language=lang,
-                task="transcribe",
-            )
-        except Exception:
-            # If language code not supported by checkpoint, skip
-            continue
-    return processors_by_lang
-
-
-def prepare_functions(base_processor: WhisperProcessor, processors_by_lang: Dict[str, WhisperProcessor]):
+def prepare_dataset_function(processor):
     """
     Returns two mapping functions:
       - prepare_audio: decode audio to arrays and compute input_features
       - prepare_labels: add per-example lang tokens and encode labels
     """
 
-    def prepare_audio(batch):
-        # Datasets will (on-the-fly) decode to array at target sampling_rate set via cast_column
+    def prepare_dataset(batch):
         audio = batch["audio"]
-        batch["input_features"] = base_processor.feature_extractor(
-            audio["array"], sampling_rate=audio["sampling_rate"]
-    ).input_features[0]
+
+        batch["input_features"] = processor.feature_extractor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
+
+        processor.tokenizer.set_prefix_tokens(language=batch["lang"], task="transcribe") 
+        batch["labels"] = processor.tokenizer(batch["sentence"]).input_ids
+
         return batch
 
-    def prepare_labels(batch):
-        # Per-example language tokens using batch["lang"]
-        lang = batch.get("lang", None)
-        # Pick tokenizer for this language if available, else fallback to base
-        proc = processors_by_lang.get(lang, base_processor)
-
-        # Build language/task prompt ids if available, then append text ids
-        prompt_ids: List[int] = []
-        try:
-            # Prefer tokenizer's helper if present
-            prompt = proc.tokenizer.get_decoder_prompt_ids(language=lang, task="transcribe")  # type: ignore[attr-defined]
-            if prompt is not None:
-                # get_decoder_prompt_ids can return List[Tuple[str,int]] or List[List[int]] depending on version
-                # Normalize to flat List[int]
-                if isinstance(prompt, list) and len(prompt) > 0 and isinstance(prompt[0], (list, tuple)):
-                    prompt_ids = [int(p[1] if isinstance(p, tuple) else p[-1]) for p in prompt]  # type: ignore[index]
-                elif isinstance(prompt, list) and all(isinstance(v, int) for v in prompt):
-                    prompt_ids = prompt  # already flat ids
-        except Exception:
-            # If helper not available, skip; model will still learn without explicit prompt
-            prompt_ids = []
-
-        text_ids = proc.tokenizer(batch["sentence"], add_special_tokens=False).input_ids
-        labels = (prompt_ids + text_ids) if prompt_ids else text_ids
-        batch["labels"] = labels
-    return batch
-
-    return prepare_audio, prepare_labels
+    return prepare_dataset
 
 
 # -----------------------
@@ -191,10 +137,13 @@ def make_compute_metrics_fn(tokenizer: WhisperTokenizer):
         # Decode
         pred_str = tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
         label_str = tokenizer.batch_decode(label_ids, skip_special_tokens=True)
+        # print(pred_str)
+        # print(label_str)
 
         wer = 100.0 * wer_metric.compute(predictions=pred_str, references=label_str)
         cer = 100.0 * cer_metric.compute(predictions=pred_str, references=label_str)
-    return {"wer": wer, "cer": cer}
+
+        return {"wer": wer, "cer": cer}
 
     return compute_metrics
 
@@ -259,18 +208,7 @@ def main():
     test_ds = test_ds.cast_column("audio", Audio(sampling_rate=target_sr))
 
     # --- Processor and model
-    processor = build_processor(args.model_id, args.default_language, task="transcribe")
-    # Derive set of languages present across splits to build per-language processors
-    langs = set()
-    if "lang" in train_ds.features:
-        langs.update(set(train_ds.unique("lang")))
-    if "lang" in val_ds.features:
-        langs.update(set(val_ds.unique("lang")))
-    if "lang" in test_ds.features:
-        langs.update(set(test_ds.unique("lang")))
-
-    processors_by_lang = build_language_processors(args.model_id, sorted(list(langs)))
-    tokenizer = processor.tokenizer
+    processor = WhisperProcessor.from_pretrained(args.model_id, task="transcribe")
 
     model = WhisperForConditionalGeneration.from_pretrained(args.model_id)
     # Do not force a single language at generation time; let per-example labels guide training
@@ -279,17 +217,29 @@ def main():
     model.generation_config.task = "transcribe"
 
     # --- Map functions
-    prepare_audio, prepare_labels = prepare_functions(processor, processors_by_lang)
+    prepare_dataset = prepare_dataset_function(processor)
 
     # Apply per-sample processing (single-thread first; you can set num_proc if your env supports it)
-    train_ds = train_ds.map(prepare_audio)
-    train_ds = train_ds.map(prepare_labels)
+    train_ds = train_ds.map(prepare_dataset)
+    val_ds = val_ds.map(prepare_dataset)
+    test_ds = test_ds.map(prepare_dataset)
 
-    val_ds = val_ds.map(prepare_audio)
-    val_ds = val_ds.map(prepare_labels)
-
-    test_ds = test_ds.map(prepare_audio)
-    test_ds = test_ds.map(prepare_labels)
+    # --- Preview: print 10 rows with decoded labels
+    # try:
+    #     preview_n = min(10, len(train_ds))
+    #     preview_ds = train_ds.select(range(preview_n))
+    #     print("\nPreviewing first", preview_n, "training rows (decoded labels):")
+    #     for i in range(preview_n):
+    #         ex = preview_ds[i]
+    #         lang = ex.get("lang", None)
+    #         sentence = ex.get("sentence", None)
+    #         labels = ex.get("labels", [])
+    #         # Use language-specific tokenizer for decoding if available
+    #         decoded = processor.tokenizer.decode(labels, skip_special_tokens=False)
+    #         print(f"[{i}] lang={lang} | target(sentence)={sentence}")
+    #         print(f"    decoded(labels)={decoded}")
+    # except Exception as e:
+    #     print("Warning: failed to preview training rows:", repr(e))
 
     # --- Data collator
     data_collator = DataCollatorSpeechSeq2SeqWithPadding(
@@ -298,7 +248,7 @@ def main():
     )
 
     # --- Metrics
-    compute_metrics = make_compute_metrics_fn(tokenizer)
+    compute_metrics = make_compute_metrics_fn(processor.tokenizer)
 
     # --- Training args
     # NOTE: Newer Transformers prefer eval_strategy/save_strategy/logging_strategy over deprecated evaluation_strategy.

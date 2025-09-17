@@ -31,6 +31,83 @@ We will define 'better performance' as:
  - Add 3 more dialects to each langauge
  - Make plots for metrics and upload into Overleaf (https://www.overleaf.com/4838225339djtytwywdtmd#556cb6), think of a funny name, and we're done!
 
+## Whisper Fine-tuning
+
+This repository includes a comprehensive Whisper fine-tuning pipeline for multilingual ASR (Automatic Speech Recognition).
+
+### Features
+
+- **Multilingual Support**: Train on multiple languages (English, Hindi, etc.)
+- **Data Pipeline Integration**: Works with the existing data ingestion pipeline
+- **WANDB Integration**: Track training metrics and experiments
+- **Comprehensive Evaluation**: WER (Word Error Rate) and CER (Character Error Rate) metrics
+- **Flexible Configuration**: Easy to customize training parameters
+
+### Quick Start
+
+1. **Prepare your data** using the data ingestion pipeline:
+   ```bash
+   python data_ingestion.py --config configs/en_hi_config.json --out data/en_hi
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run training**:
+   ```bash
+   # Option 1: Use the provided script
+   ./run_whisper_training.sh
+   
+   # Option 2: Run directly
+   python whisper_training.py \
+       --data_dir data/en_hi \
+       --model_name openai/whisper-small \
+       --output_dir ./whisper-multilingual \
+       --languages en hi \
+       --use_wandb
+   ```
+
+### Training Script Options
+
+The `whisper_training.py` script supports the following key arguments:
+
+- `--data_dir`: Path to directory containing train.csv, val.csv, test.csv
+- `--model_name`: Whisper model to fine-tune (e.g., whisper-small, whisper-base, whisper-medium)
+- `--output_dir`: Directory to save model checkpoints
+- `--languages`: Languages to train on (e.g., "en hi")
+- `--learning_rate`: Learning rate (default: 1e-5)
+- `--batch_size`: Training batch size (default: 16)
+- `--max_steps`: Maximum training steps (default: 5000)
+- `--use_wandb`: Enable WANDB logging
+- `--wandb_project`: WANDB project name
+- `--push_to_hub`: Push final model to Hugging Face Hub
+
+### Data Format
+
+The training script expects CSV files with the following columns:
+- `audio_file`: Path to audio file (relative to data directory)
+- `text`: Transcription text
+- `lang`: Language code (e.g., "en", "hi")
+- `accent`: Accent/dialect identifier
+
+### Monitoring Training
+
+- **WANDB**: View real-time training metrics at https://wandb.ai
+- **Local Logs**: Training progress is logged to console
+- **Checkpoints**: Model checkpoints are saved every `save_steps` steps
+
+### Model Evaluation
+
+The script automatically evaluates on:
+- **Validation set**: During training (every `eval_steps`)
+- **Test set**: After training completion
+
+Metrics tracked:
+- **WER**: Word Error Rate
+- **CER**: Character Error Rate
+
  ## Other Resources
  
   - `https://github.com/pilancilab/CRONOS` contains examples of multi-class classification

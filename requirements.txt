@@ -1,11 +1,30 @@
-# Core
-datasets==3.6.0
+# Core dependencies
+datasets[audio]>=3.6.0
 soundfile>=0.12.1
 numpy>=1.24
 scipy>=1.10
 tqdm>=4.66
+pandas>=1.5.0
 
 # Audio processing
 librosa>=0.10.1
 noisereduce>=3.0.0
 pydub>=0.25.1
+
+# Whisper training dependencies (matching HF documentation)
+transformers>=4.35.0
+torch>=2.0.0
+torchaudio>=2.0.0
+accelerate>=0.20.0
+evaluate>=0.4.0
+jiwer>=3.0.0
+
+# Experiment tracking and logging
+wandb>=0.15.0
+tensorboard>=2.13.0
+
+# Hugging Face Hub integration
+huggingface_hub>=0.17.0
+
+# Demo and visualization (optional)
+gradio>=3.0.0

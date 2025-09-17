@@ -73,17 +73,17 @@ class DataCollatorSpeechSeq2SeqWithPadding:
         # inputs: already feature-extracted to "input_features"
         input_features = [{"input_features": f["input_features"]} for f in features]
         batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
-
+        
         # labels: already tokenized to "labels"
         label_features = [{"input_ids": f["labels"]} for f in features]
         labels_batch = self.processor.tokenizer.pad(label_features, return_tensors="pt")
-
+        
         labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
-
+        
         # If BOS is present at position 0, drop it (added later by model)
         if labels.shape[1] > 0 and (labels[:, 0] == self.decoder_start_token_id).all().item():
             labels = labels[:, 1:]
-
+        
         batch["labels"] = labels
         return batch
 
@@ -108,7 +108,23 @@ def build_processor(model_id: str, default_language: Optional[str], task: str) -
     return processor
 
 
-def prepare_functions(processor: WhisperProcessor):
+def build_language_processors(model_id: str, languages: List[str]) -> Dict[str, WhisperProcessor]:
+    """Create a cache of processors keyed by language code."""
+    processors_by_lang: Dict[str, WhisperProcessor] = {}
+    for lang in languages:
+        try:
+            processors_by_lang[lang] = WhisperProcessor.from_pretrained(
+                model_id,
+                language=lang,
+                task="transcribe",
+            )
+        except Exception:
+            # If language code not supported by checkpoint, skip
+            continue
+    return processors_by_lang
+
+
+def prepare_functions(base_processor: WhisperProcessor, processors_by_lang: Dict[str, WhisperProcessor]):
     """
     Returns two mapping functions:
       - prepare_audio: decode audio to arrays and compute input_features
@@ -118,25 +134,37 @@ def prepare_functions(processor: WhisperProcessor):
     def prepare_audio(batch):
         # Datasets will (on-the-fly) decode to array at target sampling_rate set via cast_column
         audio = batch["audio"]
-        batch["input_features"] = processor.feature_extractor(
+        batch["input_features"] = base_processor.feature_extractor(
             audio["array"], sampling_rate=audio["sampling_rate"]
-        ).input_features[0]
+    ).input_features[0]
         return batch
 
     def prepare_labels(batch):
         # Per-example language tokens using batch["lang"]
         lang = batch.get("lang", None)
-        # If lang provided, set prefix tokens; else rely on tokenizer defaults
-        if lang:
-            # Ensure language code is recognized; if not, fallback to tokenizer default
-            try:
-                processor.tokenizer.set_prefix_tokens(language=lang, task="transcribe")
-            except Exception:
-                # If unknown code (e.g., accent in 'lang'), do nothing
-                pass
-        labels = processor.tokenizer(batch["sentence"]).input_ids
+        # Pick tokenizer for this language if available, else fallback to base
+        proc = processors_by_lang.get(lang, base_processor)
+
+        # Build language/task prompt ids if available, then append text ids
+        prompt_ids: List[int] = []
+        try:
+            # Prefer tokenizer's helper if present
+            prompt = proc.tokenizer.get_decoder_prompt_ids(language=lang, task="transcribe")  # type: ignore[attr-defined]
+            if prompt is not None:
+                # get_decoder_prompt_ids can return List[Tuple[str,int]] or List[List[int]] depending on version
+                # Normalize to flat List[int]
+                if isinstance(prompt, list) and len(prompt) > 0 and isinstance(prompt[0], (list, tuple)):
+                    prompt_ids = [int(p[1] if isinstance(p, tuple) else p[-1]) for p in prompt]  # type: ignore[index]
+                elif isinstance(prompt, list) and all(isinstance(v, int) for v in prompt):
+                    prompt_ids = prompt  # already flat ids
+        except Exception:
+            # If helper not available, skip; model will still learn without explicit prompt
+            prompt_ids = []
+
+        text_ids = proc.tokenizer(batch["sentence"], add_special_tokens=False).input_ids
+        labels = (prompt_ids + text_ids) if prompt_ids else text_ids
         batch["labels"] = labels
-        return batch
+    return batch
 
     return prepare_audio, prepare_labels
 
@@ -148,7 +176,7 @@ def prepare_functions(processor: WhisperProcessor):
 def make_compute_metrics_fn(tokenizer: WhisperTokenizer):
     wer_metric = evaluate.load("wer")
     cer_metric = evaluate.load("cer")
-
+    
     def compute_metrics(pred):
         pred_ids = pred.predictions
         if isinstance(pred_ids, tuple):  # older versions may return (logits,)
@@ -166,7 +194,7 @@ def make_compute_metrics_fn(tokenizer: WhisperTokenizer):
 
         wer = 100.0 * wer_metric.compute(predictions=pred_str, references=label_str)
         cer = 100.0 * cer_metric.compute(predictions=pred_str, references=label_str)
-        return {"wer": wer, "cer": cer}
+    return {"wer": wer, "cer": cer}
 
     return compute_metrics
 
@@ -232,6 +260,16 @@ def main():
 
     # --- Processor and model
     processor = build_processor(args.model_id, args.default_language, task="transcribe")
+    # Derive set of languages present across splits to build per-language processors
+    langs = set()
+    if "lang" in train_ds.features:
+        langs.update(set(train_ds.unique("lang")))
+    if "lang" in val_ds.features:
+        langs.update(set(val_ds.unique("lang")))
+    if "lang" in test_ds.features:
+        langs.update(set(test_ds.unique("lang")))
+
+    processors_by_lang = build_language_processors(args.model_id, sorted(list(langs)))
     tokenizer = processor.tokenizer
 
     model = WhisperForConditionalGeneration.from_pretrained(args.model_id)
@@ -241,7 +279,7 @@ def main():
     model.generation_config.task = "transcribe"
 
     # --- Map functions
-    prepare_audio, prepare_labels = prepare_functions(processor)
+    prepare_audio, prepare_labels = prepare_functions(processor, processors_by_lang)
 
     # Apply per-sample processing (single-thread first; you can set num_proc if your env supports it)
     train_ds = train_ds.map(prepare_audio)
@@ -297,7 +335,7 @@ def main():
         greater_is_better=False,
         push_to_hub=args.push_to_hub,
     )
-
+    
 
     trainer = Seq2SeqTrainer(
         args=training_args,
@@ -311,7 +349,7 @@ def main():
 
     # --- Train
     trainer.train()
-
+    
     # --- Final test evaluation
     test_metrics = trainer.evaluate(test_ds, metric_key_prefix="test")
     # Persist

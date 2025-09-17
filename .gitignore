@@ -211,3 +211,5 @@ data/
 
 wandb/
 models/
+
+.DS_Store

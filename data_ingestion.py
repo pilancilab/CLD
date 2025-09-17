@@ -66,7 +66,7 @@ def load_common_voice(lang_code: str, split: str = "train", streaming: bool = Fa
     return ds
 
 
-def iter_common_voice_samples(ds) -> Iterable[Dict]:
+def iter_common_voice_samples(ds, accent_name, accent_code) -> Iterable[Dict]:
     for ex in ds:
         # Each example has ex["audio"] dict with array and sampling_rate when accessed
         try:
@@ -76,13 +76,16 @@ def iter_common_voice_samples(ds) -> Iterable[Dict]:
             sr = audio["sampling_rate"]
             text = ex.get("sentence", "")
             lang = ex.get("locale", "")
-            accent = ex.get("accent", "") or ""
+            accent = ex.get("accent", "")
+            if(accent != accent_name):
+                continue
+
             yield {
                 "array": array,
                 "sr": sr,
                 "text": text,
                 "lang": lang,
-                "accent": accent,
+                "accent": accent_code,
             }
         except Exception:
             continue
@@ -95,30 +98,7 @@ def load_lahaja(split: str = "test"):
     return ds
 
 
-def iter_lahaja_samples(ds) -> Iterable[Dict]:
-    # Map native_state values to language codes
-    native_state_to_lang = {
-        "Hindi": "hi",
-        "Telugu": "te", 
-        "Konkani": "kok",
-        "Bengali": "bn",
-        "Marathi": "mr",
-        "Bodo": "brx",
-        "Odia": "or",
-        "Malayalam": "ml",
-        "Nepali": "ne",
-        "Kashmiri": "ks",
-        "Kannada": "kn",
-        "Gujarati": "gu",
-        "Maithili": "mai",
-        "Assamese": "as",
-        "Punjabi": "pa",
-        "Dogri": "doi",
-        "Tamil": "ta",
-        "Sindhi": "sd",
-        "Urdu": "ur"
-    }
-    
+def iter_lahaja_samples(ds, accent_name, accent_code) -> Iterable[Dict]:
     for ex in ds:
         try:
             audio_data = ex.get("audio_filepath", None)
@@ -135,18 +115,15 @@ def iter_lahaja_samples(ds) -> Iterable[Dict]:
             lang = ex.get("lang", "")
             native_language = ex.get("native_language", "")
             
-            # Map native_language to language code if needed
-            if native_language in native_state_to_lang:
-                accent = native_state_to_lang[native_language]
-            else:
-                accent = native_language or ""
+            if(native_language != accent_name):
+                continue
                 
             yield {
                 "array": array,
                 "sr": sr,
                 "text": text,
                 "lang": lang,
-                "accent": accent,
+                "accent": accent_code,
             }
         except Exception:
             continue
@@ -226,28 +203,19 @@ def ingest(config: Dict, out_dir: str) -> None:
     languages = config.get("langauges", {}) or config.get("languages", {})
     for lang_key, lang_spec in languages.items():
         accents = lang_spec.get("accents", [])
-        # accents may be dict-like; normalize to (accent_code, dataset_name)
-        norm_accents: List[Tuple[str, Dict]] = []
-        if isinstance(accents, list):
-            for accent_entry in accents:
-                if isinstance(accent_entry, dict):
-                    for accent_code, meta in accent_entry.items():
-                        norm_accents.append((accent_code, meta))
-        elif isinstance(accents, dict):
-            for accent_code, meta in accents.items():
-                norm_accents.append((accent_code, meta))
 
-        for accent_code, meta in norm_accents:
-            dataset_name = meta.get("dataset") if isinstance(meta, dict) else None
+        for accent_code, meta in accents.items():
+            dataset_name = meta.get("dataset")
+            accent_name = meta.get("name", accent_code)
             if dataset_name is None:
                 continue
 
             if dataset_name == "common_voice":
                 ds = load_common_voice(lang_key, split="train", streaming=False)
-                iterable = iter_common_voice_samples(ds)
+                iterable = iter_common_voice_samples(ds, accent_name, accent_code)
             elif dataset_name in ("lahaja"):
                 ds = load_lahaja(split="test")
-                iterable = iter_lahaja_samples(ds)
+                iterable = iter_lahaja_samples(ds, accent_name, accent_code)
             else:
                 # Unknown dataset; skip for now
                 continue

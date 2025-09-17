@@ -4,6 +4,7 @@
         "id": {
             "accents": {
                 "id": {
+                    "name": "",
                     "dataset": "common_voice"
                 }
             }
@@ -18,12 +19,15 @@
         "hi": {
             "accents": {
                 "hi": {
+                    "name": "Hindi",
                     "dataset": "lahaja"
                 },
                 "te": {
+                    "name": "Telugu",
                     "dataset": "lahaja"
                 },
                 "kok": {
+                    "name": "Konkani",
                     "dataset": "lahaja"
                 }
             }

@@ -9,33 +9,32 @@ export WANDB_PROJECT="whisper-multilingual"
 
 # Training parameters
 DATA_DIR="data/en_hi"  # Change to your data directory
-MODEL_NAME="openai/whisper-small"  # or whisper-base, whisper-medium, etc.
+TRAIN_BATCH_SIZE=64
+EVAL_BATCH_SIZE=8
+GRADIENT_ACCUMULATION_STEPS=2
+MODEL_ID="openai/whisper-small"  # or whisper-base, whisper-medium, etc.
 OUTPUT_DIR="./models/whisper-multilingual-en-hi"
-LANGUAGES="en hi"
 LEARNING_RATE=1e-5
 BATCH_SIZE=16
-MAX_STEPS=0
+EPOCHS=5
 EVAL_STEPS=1000
 SAVE_STEPS=1000
 
 # Run training
 python whisper_training.py \
     --data_dir "$DATA_DIR" \
-    --per_device_train_batch_size 64  \
-    --per_device_eval_batch_size 8 \
-     --gradient_accumulation_steps 2 \
-    --model_name "$MODEL_NAME" \
+    --per_device_train_batch_size "$TRAIN_BATCH_SIZE"  \
+    --per_device_eval_batch_size "$EVAL_BATCH_SIZE" \
+    --gradient_accumulation_steps "$GRADIENT_ACCUMULATION_STEPS" \
+    --model_id "$MODEL_ID" \
     --output_dir "$OUTPUT_DIR" \
-    --languages $LANGUAGES \
     --learning_rate "$LEARNING_RATE" \
-    --batch_size "$BATCH_SIZE" \
-    --max_steps "$MAX_STEPS" \
+    --num_train_epochs "$EPOCHS" \
     --eval_steps "$EVAL_STEPS" \
     --save_steps "$SAVE_STEPS" \
-    --use_wandb \
     --wandb_project "$WANDB_PROJECT" \
-    --fp32 \
-    --wandb_run_name "whisper-small-en-hi-$(date +%Y%m%d-%H%M%S)"
+    --fp16 \
+    --run_name "whisper-small-en-hi-$(date +%Y%m%d-%H%M%S)"
 
 echo "Training completed! Check the output directory: $OUTPUT_DIR"
 echo "View training logs at: https://wandb.ai"

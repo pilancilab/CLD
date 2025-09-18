@@ -14,13 +14,16 @@ OUTPUT_DIR="./models/whisper-multilingual-en-hi"
 LANGUAGES="en hi"
 LEARNING_RATE=1e-5
 BATCH_SIZE=16
-MAX_STEPS=5000
+MAX_STEPS=0
 EVAL_STEPS=1000
 SAVE_STEPS=1000
 
 # Run training
 python whisper_training.py \
     --data_dir "$DATA_DIR" \
+    --per_device_train_batch_size 64  \
+    --per_device_eval_batch_size 8 \
+     --gradient_accumulation_steps 2 \
     --model_name "$MODEL_NAME" \
     --output_dir "$OUTPUT_DIR" \
     --languages $LANGUAGES \

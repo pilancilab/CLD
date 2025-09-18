@@ -252,11 +252,12 @@ def ingest(config, out_path):
             filtered = []
             print(f'Ingesting {lang_code}_{accent_params.get("code")} from {accent_params.get("dataset")} dataset')
             for a in iterable:
+                if len(filtered) > balanced_count:
+                    break
                 if(is_audio_in_length_range(a["audio"])):
                     filtered.append(a)
             
             random.shuffle(filtered)
-            filtered = filtered[:balanced_count]
 
             cleaned = []
 

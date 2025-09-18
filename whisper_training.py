@@ -90,7 +90,7 @@ def prepare_dataset_function(processor):
         batch["input_features"] = processor.feature_extractor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
 
         processor.tokenizer.set_prefix_tokens(language=batch["lang"], task="transcribe") 
-        batch["labels"] = processor.tokenizer(batch["sentence"]).input_ids
+        batch["labels"] = processor.tokenizer(batch["text"]).input_ids
 
         return batch
 

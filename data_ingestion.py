@@ -38,6 +38,8 @@ MAX_LABEL_LENGTH = 448 # whisper max tokens=448
 
 TARGET_SR = 16000
 
+COMMON_VOICE_USED = []
+
 ### HELPER FUNCS
 
 def measure_peak_dbfs(audio):
@@ -135,36 +137,56 @@ def is_audio_in_length_range(audio):
 
 ### LOADER FUNCS
 
-# func(lang, accent, accent_config) -> iter
+# func(lang, accent, accent_config, common_voice_dir) -> iter
 
-def load_common_voice(lang, accent_config):
-    ds = load_dataset("mozilla-foundation/common_voice_17_0", lang, split="train", streaming=False) #TODO
+def load_common_voice(lang, accent_config, common_voice_dir=None):
+    if common_voice_dir is None:
+        raise ValueError("common_voice_dir is required for local Common Voice loading")
+    tsv_path = os.path.join(common_voice_dir, lang, "validated.tsv")
+    if not os.path.exists(tsv_path):
+        raise FileNotFoundError(f"validated.tsv not found at {tsv_path}")
 
-    for ex in ds:
-        # Each example has ex["audio"] dict with array and sampling_rate when accessed
-        try:
-            audio = ex["audio"]
-            # Accessing triggers decode/resample to dataset.features["audio"].sampling_rate
-            array = audio["array"]
-            sr = audio["sampling_rate"]
-            text = ex.get("sentence", "")
-            accent = ex.get("accent", "")
-            if(accent != accent_config.get("column_name")):
+    global COMMON_VOICE_USED
+    if len(COMMON_VOICE_USED) == 0:
+        # set to length of arr
+        COMMON_VOICE_USED = [False for _ in open(tsv_path)]
+        COMMON_VOICE_USED = COMMON_VOICE_USED[1:]
+    
+    column_name = accent_config.get("column_name")
+    code = accent_config.get("code")
+    with open(tsv_path, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for i, row in enumerate(reader):
+            accents = row.get('accents', '').split(',')
+            if column_name not in accents:
+                continue
+            audio_path = os.path.join(common_voice_dir, lang, "clips", row['path'])
+            if not os.path.exists(audio_path):
+                continue
+            if COMMON_VOICE_USED[i]:
+                continue
+            try:
+                waveform, sr = torchaudio.load(audio_path)
+                # Convert to mono
+                if waveform.shape[0] > 1:
+                    waveform = waveform.mean(dim=0, keepdim=True)
+                array = waveform.squeeze().numpy().astype(np.float32)
+                text = row['sentence']
+                COMMON_VOICE_USED[i] = True;
+                yield {
+                    "audio": {
+                        "array": array,
+                        "sampling_rate": sr,
+                    },
+                    "text": text,
+                    "lang": lang,
+                    "accent": code,
+                }
+            except Exception as e:
+                print(f"Error loading {audio_path}: {e}")
                 continue
 
-            yield {
-                "audio": {
-                    "array": array,
-                    "sampling_rate": sr,
-                },
-                "text": text,
-                "lang": lang,
-                "accent": accent_config.get("code"),
-            }
-        except Exception:
-            continue
-
-def load_lahaja(lang, accent_config):
+def load_lahaja(lang, accent_config, common_voice_dir=None):
     ds = load_dataset("ai4bharat/Lahaja", split="test")
 
     for ex in ds:
@@ -246,7 +268,7 @@ def ingest(config, out_path):
             if(not loader_func) :
                 print(f"WARNING: unkonwn dataset {accent_params.get('dataset')}")
             
-            iterable = loader_func(lang_code, accent_params)
+            iterable = loader_func(lang_code, accent_params, config.get("common_voice_dir"))
     
             # FILTER BY LENGTH
             filtered = []
@@ -268,7 +290,7 @@ def ingest(config, out_path):
                 a["audio"] = reduce_noise(a["audio"])
 
                 if config.get("augment"):
-                    a["array"] = augmentation(a["array"], sample_rate=TARGET_SR)
+                    a["audio"]["array"] = augmentation(a["audio"]["array"], sample_rate=TARGET_SR)
                     
                 cleaned.append(a)
             
@@ -301,12 +323,14 @@ def main():
     parser.add_argument("--out", type=str, required=True, help="Output directory")
     parser.add_argument("--augment", action="store_true", help="Run augmentation or not")
     parser.add_argument("--musan-dir", type=str, required=False, help="Musan directory")
+    parser.add_argument("--common-voice-dir", type=str, default=None, help="Path to Common Voice directory")
     args = parser.parse_args()
 
     cfg = parse_json_config(args.config)
+    if args.common_voice_dir:
+        cfg["common_voice_dir"] = args.common_voice_dir
     ingest(cfg, args.out)
 
 
 if __name__ == "__main__":
     main()
-

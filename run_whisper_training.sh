@@ -9,7 +9,7 @@ export WANDB_PROJECT="whisper-multilingual"
 
 # Training parameters
 DATA_DIR="data/en_hi"  # Change to your data directory
-TRAIN_BATCH_SIZE=64
+TRAIN_BATCH_SIZE=16
 EVAL_BATCH_SIZE=8
 GRADIENT_ACCUMULATION_STEPS=2
 MODEL_ID="openai/whisper-small"  # or whisper-base, whisper-medium, etc.
@@ -30,9 +30,9 @@ python whisper_training.py \
     --output_dir "$OUTPUT_DIR" \
     --learning_rate "$LEARNING_RATE" \
     --num_train_epochs "$EPOCHS" \
-    --eval_steps "$EVAL_STEPS" \
-    --save_steps "$SAVE_STEPS" \
     --wandb_project "$WANDB_PROJECT" \
+    --eval_strategy epoch \
+    --save_strategy epoch \
     --fp16 \
     --run_name "whisper-small-en-hi-$(date +%Y%m%d-%H%M%S)"
 

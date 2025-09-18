@@ -6,18 +6,22 @@ import shutil
 import random
 from dataclasses import dataclass, field
 from typing import Dict, List, Iterable, Optional, Tuple
+from pydub import AudioSegment
+import numpy as np
+from scipy.signal import resample
+import noisereduce as nr  
+from datasets import Dataset
+from tqdm import tqdm
 
+import torch
+import torchaudio
 import soundfile as sf
+from datasets import load_dataset, DatasetDict
 
-try:
-    from datasets import load_dataset
-except Exception:
-    load_dataset = None
-
-
-# -----------------------
-# Config structures
-# -----------------------
+from audiomentations import (
+    Compose, TimeStretch, Gain, PitchShift, OneOf, 
+    AddBackgroundNoise, AddGaussianNoise, PolarityInversion
+)
 
 @dataclass
 class SplitRatios:
@@ -26,47 +30,116 @@ class SplitRatios:
     test: float = 0.1
 
 
-@dataclass
-class IngestionParams:
-    balanced_count: Optional[int] = None
-    split: SplitRatios = field(default_factory=SplitRatios)
-    target_sr: int = 22050
+PEAK_DBFS_MIN = -10  # Lower bound for peak dBFS
+PEAK_DBFS_MAX = -7   # Upper bound for peak dBFS
 
+MAX_INPUT_LENGTH = 30
+MAX_LABEL_LENGTH = 448 # whisper max tokens=448
 
-# -----------------------
-# Utility helpers
-# -----------------------
+TARGET_SR = 16000
 
-def ensure_dir(path: str) -> None:
-    os.makedirs(path, exist_ok=True)
+### HELPER FUNCS
 
+def measure_peak_dbfs(audio):
+    # audio = audio[:, 0]  # Use only one channel if stereo
+    peak_amplitude = np.max(np.abs(audio))  # Find peak amplitude
 
-def write_wav_bytes_to_path(audio_array, sampling_rate: int, out_path: str) -> None:
-    ensure_dir(os.path.dirname(out_path))
-    sf.write(out_path, audio_array, sampling_rate)
+    # Check if the audio is integer-based (e.g., int16, int32)
+    if np.issubdtype(audio.dtype, np.integer):
+        max_possible_amplitude = np.iinfo(audio.dtype).max  # e.g., 32767 for int16
+    else:
+        max_possible_amplitude = 1.0  # Float WAVs are usually in range [-1,1]
 
+    # Compute peak dBFS relative to max amplitude
+    peak_dbfs = 20 * np.log10(peak_amplitude / max_possible_amplitude) if peak_amplitude > 0 else -np.inf
+    return peak_dbfs
 
-def save_rows_to_csv(rows: List[Dict[str, str]], csv_path: str) -> None:
-    ensure_dir(os.path.dirname(csv_path))
-    with open(csv_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["audio_file", "text", "lang", "accent"])
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
+### AUDIO PROCESSOR FUNCS
 
+def normalize_audio(audio):
+    array = audio["array"]
+    sr = audio["sampling_rate"]
 
-# -----------------------
-# Dataset loaders
-# -----------------------
+    # Convert to mono if stereo
+    if len(array.shape) > 1:
+        array = np.mean(array, axis=0)
 
-def load_common_voice(lang_code: str, split: str = "train", streaming: bool = False):
-    if load_dataset is None:
-        raise RuntimeError("datasets library not available. pip install datasets")
-    ds = load_dataset("mozilla-foundation/common_voice_17_0", lang_code, split=split, streaming=streaming) #TODO: CHANGE TO 17.0
-    return ds
+    # Resample if needed
+    waveform = torch.from_numpy(array).unsqueeze(0).to(torch.float32)  # (1, time)
+    if sr != TARGET_SR:
+        waveform = torchaudio.functional.resample(
+            waveform, orig_freq=sr, new_freq=TARGET_SR
+        )
+        audio["sampling_rate"] = TARGET_SR
 
+    array = waveform.squeeze().numpy().astype(np.float32)
 
-def iter_common_voice_samples(ds, accent_name, accent_code) -> Iterable[Dict]:
+    current_peak_dbfs = measure_peak_dbfs(array)
+
+    if PEAK_DBFS_MIN <= current_peak_dbfs <= PEAK_DBFS_MAX:
+        audio["array"] = array
+        return audio
+
+    # Determine the target peak dBFS
+    target_peak_dbfs = PEAK_DBFS_MAX if current_peak_dbfs < PEAK_DBFS_MIN else PEAK_DBFS_MIN
+    gain = target_peak_dbfs - current_peak_dbfs  # Gain in dB to apply
+
+    # Convert to int16 for pydub
+    int16_array = (array * 32767).astype(np.int16)
+
+    # Load audio and apply gain
+    audio_seg = AudioSegment(
+        data=int16_array.tobytes(),
+        frame_rate=audio["sampling_rate"],
+        sample_width=2,  # 2 bytes for int16
+        channels=1
+    )
+    audio_seg = audio_seg.apply_gain(gain)
+
+    # Convert back to float32
+    new_int16 = np.frombuffer(audio_seg.raw_data, dtype=np.int16)
+    new_array = (new_int16 / 32767).astype(np.float32)
+
+    audio["array"] = new_array
+    return audio
+
+def reduce_noise(audio):
+    array = audio["array"]
+    sr = audio["sampling_rate"]
+
+    # Convert to mono if stereo
+    if len(array.shape) > 1:
+        array = np.mean(array, axis=0)
+
+    if np.max(np.abs(array)) < 1e-4:  # If audio is too quiet, skip noise reduction
+        print('Skipping noise reduction due to low signal level.')
+        audio["array"] = array
+        return audio
+
+    # Avoid divide-by-zero 
+    array = array + np.random.normal(0, 1e-6, array.shape)
+
+    audio["array"] = nr.reduce_noise(y=array, sr=sr, prop_decrease=0.85)
+    return audio
+
+### FILTERS FUNCS
+
+def is_audio_in_length_range(audio):
+    length = len(audio["array"]) / audio["sampling_rate"]
+    return length <= MAX_INPUT_LENGTH
+
+# def is_labels_in_length_range(labels):
+#     return len(labels) < MAX_LABEL_LENGTH
+
+# by max input length (30s)
+
+### LOADER FUNCS
+
+# func(lang, accent, accent_config) -> iter
+
+def load_common_voice(lang, accent_config):
+    ds = load_dataset("mozilla-foundation/common_voice_17_0", lang, split="train", streaming=False) #TODO
+
     for ex in ds:
         # Each example has ex["audio"] dict with array and sampling_rate when accessed
         try:
@@ -75,175 +148,60 @@ def iter_common_voice_samples(ds, accent_name, accent_code) -> Iterable[Dict]:
             array = audio["array"]
             sr = audio["sampling_rate"]
             text = ex.get("sentence", "")
-            lang = ex.get("locale", "")
             accent = ex.get("accent", "")
-            if(accent != accent_name):
+            if(accent != accent_config.get("column_name")):
                 continue
 
             yield {
-                "array": array,
-                "sr": sr,
+                "audio": {
+                    "array": array,
+                    "sampling_rate": sr,
+                },
                 "text": text,
                 "lang": lang,
-                "accent": accent_code,
+                "accent": accent_config.get("code"),
             }
         except Exception:
             continue
 
+def load_lahaja(lang, accent_config):
+    ds = load_dataset("ai4bharat/Lahaja", split="test")
 
-def load_lahaja(split: str = "test"):
-    if load_dataset is None:
-        raise RuntimeError("datasets library not available. pip install datasets")
-    ds = load_dataset("ai4bharat/Lahaja", split=split)
-    return ds
-
-
-def iter_lahaja_samples(ds, accent_name, accent_code) -> Iterable[Dict]:
     for ex in ds:
-        try:
-            audio_data = ex.get("audio_filepath", None)
-            if audio_data is not None and isinstance(audio_data, dict):
-                array = audio_data.get("array")
-                sr = audio_data.get("sampling_rate")
-                if array is None or sr is None:
-                    continue
-            else:
-                # Some variants expose raw bytes in a column (e.g., 'bytes' or 'audio_filepath').
-                # Prefer decoded column if available; otherwise skip.
+        audio_data = ex.get("audio_filepath", None)
+        if audio_data is not None and isinstance(audio_data, dict):
+            array = audio_data.get("array")
+            sr = audio_data.get("sampling_rate")
+            if array is None or sr is None:
                 continue
-            text = ex.get("text", "")
-            lang = ex.get("lang", "")
-            native_language = ex.get("native_language", "")
-            
-            if(native_language != accent_name):
-                continue
-                
-            yield {
-                "array": array,
-                "sr": sr,
-                "text": text,
-                "lang": lang,
-                "accent": accent_code,
-            }
-        except Exception:
+        else:
+            # Some variants expose raw bytes in a column (e.g., 'bytes' or 'audio_filepath').
+            # Prefer decoded column if available; otherwise skip.
             continue
+        text = ex.get("text", "")
+        lang = ex.get("lang", "")
+        native_language = ex.get("native_language", "")
+        
+        if(native_language != accent_config.get("column_name")):
+            continue
+            
+        yield {
+            "audio": {
+                "array": array,
+                "sampling_rate": sr,
+            },
+            "text": text,
+            "lang": lang,
+            "accent": accent_config.get("code"),
+        }
 
 
-# -----------------------
-# Cleaning pipeline hooks (reuse existing script)
-# -----------------------
+LOADER_FUNC_MAPPING = {
+    "common_voice": load_common_voice,
+    "lahaja": load_lahaja
+}
 
-from process_input_three_ways import (
-    normalize_audio,
-    process_audio_file as noise_reduce_file,
-    resample_audio,
-    TARGET_SAMPLE_RATE,
-)
-
-
-def run_cleaning_pipeline(wav_path: str, work_dir: str) -> str:
-    # Apply normalize -> noise reduction -> resample in place into work_dir
-    ensure_dir(work_dir)
-    base_name = os.path.basename(wav_path)
-    temp_path = os.path.join(work_dir, base_name)
-    # Start by copying the original
-    if os.path.abspath(wav_path) != os.path.abspath(temp_path):
-        shutil.copyfile(wav_path, temp_path)
-    # Normalize
-    normalize_audio(temp_path, work_dir)
-    # Noise reduction (reads from and writes to work_dir)
-    noise_reduce_file(os.path.join(work_dir, base_name), work_dir)
-    # Resample
-    resample_audio(os.path.join(work_dir, base_name), work_dir, target_sample_rate=TARGET_SAMPLE_RATE)
-    return os.path.join(work_dir, base_name)
-
-
-# -----------------------
-# Core ingestion
-# -----------------------
-
-
-def split_rows(rows: List[Dict[str, str]], ratios: SplitRatios) -> Tuple[List[Dict], List[Dict], List[Dict]]:
-    random.shuffle(rows)
-    n = len(rows)
-    n_train = int(n * ratios.train)
-    n_val = int(n * ratios.val)
-    train = rows[:n_train]
-    val = rows[n_train:n_train + n_val]
-    test = rows[n_train + n_val:]
-    return train, val, test
-
-
-def ingest(config: Dict, out_dir: str) -> None:
-    ensure_dir(out_dir)
-    audio_dir = os.path.join(out_dir, "audio")
-    ensure_dir(audio_dir)
-    tmp_clean_dir = os.path.join(out_dir, ".clean")
-    ensure_dir(tmp_clean_dir)
-
-    params = config.get("params", {})
-    balanced_count = params.get("balanced_count")
-    split_cfg = params.get("split", None)
-    split = SplitRatios(**split_cfg) if isinstance(split_cfg, dict) else SplitRatios()
-
-    rows: List[Dict[str, str]] = []
-
-    languages = config.get("langauges", {}) or config.get("languages", {})
-    for lang_key, lang_spec in languages.items():
-        accents = lang_spec.get("accents", [])
-
-        for accent_code, meta in accents.items():
-            dataset_name = meta.get("dataset")
-            accent_name = meta.get("name", accent_code)
-            if dataset_name is None:
-                continue
-
-            if dataset_name == "common_voice":
-                ds = load_common_voice(lang_key, split="train", streaming=False)
-                iterable = iter_common_voice_samples(ds, accent_name, accent_code)
-            elif dataset_name in ("lahaja"):
-                ds = load_lahaja(split="test")
-                iterable = iter_lahaja_samples(ds, accent_name, accent_code)
-            else:
-                # Unknown dataset; skip for now
-                continue
-
-            taken = list(iterable)[:balanced_count]
-            for sample in taken:
-                uid = str(uuid.uuid4())[:8]
-                file_name = f"{lang_key}_{accent_code}_{uid}.wav"
-                raw_path = os.path.join(audio_dir, file_name)
-
-                # Save original
-                write_wav_bytes_to_path(sample["array"], sample["sr"], raw_path)
-
-                # Clean in place to match your process_input_three_ways
-                cleaned_path = run_cleaning_pipeline(raw_path, tmp_clean_dir)
-
-                # Move cleaned back into audio_dir (overwrite original)
-                shutil.copyfile(cleaned_path, raw_path)
-
-                rows.append({
-                    "audio_file": os.path.relpath(raw_path, out_dir),
-                    "text": sample.get("text", ""),
-                    "lang": sample.get("lang", lang_key),
-                    "accent": sample.get("accent", accent_code),
-                })
-
-    # Optional augmentation stub (placeholder)
-    # TODO: integrate MUSAN/pyannote pipeline here.
-
-    train_rows, val_rows, test_rows = split_rows(rows, split)
-
-    save_rows_to_csv(train_rows, os.path.join(out_dir, "train.csv"))
-    save_rows_to_csv(val_rows, os.path.join(out_dir, "val.csv"))
-    save_rows_to_csv(test_rows, os.path.join(out_dir, "test.csv"))
-
-    # Clean up temp dir
-    try:
-        shutil.rmtree(tmp_clean_dir)
-    except Exception:
-        pass
+### INGESTION CORE
 
 
 def parse_json_config(cfg_path: str) -> Dict:
@@ -252,12 +210,96 @@ def parse_json_config(cfg_path: str) -> Dict:
         data = json.load(f)
     return data
 
+def ingest(config, out_path):
+    """Ingests all the datasets in cfg and outputs 3 files in the directory (train.parquet, val.parquet, test.parquet)"""
+
+    params = config.get("params", {})
+    balanced_count = params.get("balanced_count")
+    split_cfg = params.get("split", None)
+    split = SplitRatios(**split_cfg) if isinstance(split_cfg, dict) else SplitRatios()
+
+
+    if config.get("augment"):
+        augmentation = Compose([
+            TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2),
+            Gain(min_gain_db=-6, max_gain_db=6, p=0.1),
+            PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
+            OneOf([
+                AddBackgroundNoise(
+                    sounds_path=config.musan_dir,
+                    min_snr_db=1.0,
+                    max_snr_db=5.0,
+                    noise_transform=PolarityInversion(),
+                    p=1.0
+                ),
+                AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
+            ], p=0.2),
+        ])
+    else:
+        augmentation = None
+
+    processed_samples = []
+
+    for lang_code, lang_dict in config.get("languages", {}).items():
+        for accent_params in lang_dict.get("accents", []):
+            loader_func = LOADER_FUNC_MAPPING.get(accent_params.get("dataset"))
+            if(not loader_func) :
+                print(f"WARNING: unkonwn dataset {accent_params.get('dataset')}")
+            
+            iterable = loader_func(lang_code, accent_params)
+    
+            # FILTER BY LENGTH
+            filtered = []
+            print(f'Ingesting {lang_code}_{accent_params.get("code")} from {accent_params.get("dataset")} dataset')
+            for a in iterable:
+                if(is_audio_in_length_range(a["audio"])):
+                    filtered.append(a)
+            
+            random.shuffle(filtered)
+            filtered = filtered[:balanced_count]
+
+            cleaned = []
+
+
+            for a in tqdm(filtered):
+                # Resample to 16khz
+                a["audio"] = normalize_audio(a["audio"])
+                a["audio"] = reduce_noise(a["audio"])
+
+                if config.get("augment"):
+                    a["array"] = augmentation(a["array"], sample_rate=TARGET_SR)
+                    
+                cleaned.append(a)
+            
+            processed_samples.extend(cleaned)
+
+    ds = Dataset.from_dict({
+        "audio": [sample["audio"] for sample in processed_samples],
+        "text": [sample["text"] for sample in processed_samples],
+        "lang": [sample["lang"] for sample in processed_samples],
+        "accent": [sample["accent"] for sample in processed_samples]
+    })
+
+    ds_train_devtest = ds.train_test_split(test_size=split.test+split.val, seed=42)
+    ds_devtest = ds_train_devtest['test'].train_test_split(test_size=split.test/(split.test+split.val), seed=42)
+
+
+    ds_splits = DatasetDict({
+        'train': ds_train_devtest['train'],
+        'valid': ds_devtest['train'],
+        'test': ds_devtest['test']
+    })
+
+    ds_splits.save_to_disk(out_path)
+
 
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Data ingestion pipeline")
     parser.add_argument("--config", type=str, required=True, help="Path to config.json")
     parser.add_argument("--out", type=str, required=True, help="Output directory")
+    parser.add_argument("--augment", action="store_true", help="Run augmentation or not")
+    parser.add_argument("--musan-dir", type=str, required=False, help="Musan directory")
     args = parser.parse_args()
 
     cfg = parse_json_config(args.config)
@@ -266,5 +308,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

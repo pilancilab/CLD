@@ -2,38 +2,35 @@
     "name": "en + hi binary dataset",
     "languages": {
         "id": {
-            "accents": {
-                "id": {
-                    "name": "",
+            "accents": [
+                {
+                    "code": "id",
+                    "column_name": "",
                     "dataset": "common_voice"
                 }
-            }
-        },
-        "en": {
-            "accents": {
-                "sin": {
-                    "dataset": "miria_sin"
-                }
-            }
+            ]
         },
         "hi": {
-            "accents": {
-                "hi": {
-                    "name": "Hindi",
+            "accents": [
+                {
+                    "code": "hi",
+                    "column_name": "Hindi",
                     "dataset": "lahaja"
                 },
-                "te": {
-                    "name": "Telugu",
+                {
+                    "code": "te",
+                    "column_name": "Telugu",
                     "dataset": "lahaja"
                 },
-                "kok": {
-                    "name": "Konkani",
+                {
+                    "code": "kok",
+                    "column_name": "Konkani",
                     "dataset": "lahaja"
                 }
-            }
+            ]
         }
     }, 
     "params": {
-        "balanced_count": 500 
+        "balanced_count": 50 
     }
 }

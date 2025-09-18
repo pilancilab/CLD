@@ -28,3 +28,5 @@ huggingface_hub>=0.17.0
 
 # Demo and visualization (optional)
 gradio>=3.0.0
+noisereduce==3.0.3
+audiomentations==0.43.1

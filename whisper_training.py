@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Union, Optional
 import pandas as pd
 import torch
 
-from datasets import Dataset, Audio
+from datasets import load_from_disk, Audio
 import evaluate
 
 from transformers import (
@@ -45,24 +45,6 @@ from transformers import (
 # -----------------------
 # Helpers
 # -----------------------
-
-def read_split_csv(csv_path: str, data_dir: str) -> Dataset:
-    """Read a CSV to a HF Dataset and normalize columns."""
-    df = pd.read_csv(csv_path)
-    # Normalize required columns
-    required = {"audio_file", "text", "lang"}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"{csv_path} missing columns: {missing}")
-
-    # Build absolute path for audio files (Datasets Audio() expects a path)
-    df["audio"] = df["audio_file"].apply(lambda p: os.path.join(data_dir, p))
-    df.rename(columns={"text": "sentence"}, inplace=True)
-    # Keep optional 'accent' column if present
-    keep_cols = ["audio", "sentence", "lang"] + (["accent"] if "accent" in df.columns else [])
-    ds = Dataset.from_pandas(df[keep_cols], preserve_index=False)
-    return ds
-
 
 @dataclass
 class DataCollatorSpeechSeq2SeqWithPadding:
@@ -154,7 +136,7 @@ def make_compute_metrics_fn(tokenizer: WhisperTokenizer):
 
 def parse_args():
     p = argparse.ArgumentParser(description="Fine-tune Whisper on a preprocessed dataset")
-    p.add_argument("--data_dir", type=str, required=True, help="Path to preprocessed data folder")
+    p.add_argument("--data_dir", type=str, required=True, help="Path to preprocessed data file")
     p.add_argument("--output_dir", type=str, default="./whisper-out", help="Where to save checkpoints/logs")
     p.add_argument("--model_id", type=str, default="openai/whisper-small", help="Whisper checkpoint (e.g., tiny, base, small, medium, large-v3)")
     p.add_argument("--default_language", type=str, default=None, help="Optional default language code (e.g., 'en'); per-example 'lang' still applied")
@@ -193,19 +175,11 @@ def main():
         wandb.config.update(vars(args))
 
     # --- Load splits
-    train_csv = os.path.join(args.data_dir, "train.csv")
-    val_csv = os.path.join(args.data_dir, "val.csv")
-    test_csv = os.path.join(args.data_dir, "test.csv")
 
-    train_ds = read_split_csv(train_csv, args.data_dir)
-    val_ds = read_split_csv(val_csv, args.data_dir)
-    test_ds = read_split_csv(test_csv, args.data_dir)
-
-    # --- Cast audio column to 16kHz (Whisper expects 16k)
-    target_sr = 16000
-    train_ds = train_ds.cast_column("audio", Audio(sampling_rate=target_sr))
-    val_ds = val_ds.cast_column("audio", Audio(sampling_rate=target_sr))
-    test_ds = test_ds.cast_column("audio", Audio(sampling_rate=target_sr))
+    ds = load_from_disk(args.data_dir)
+    train_ds = ds["train"]
+    val_ds = ds["valid"]
+    test_ds = ds["test"]
 
     # --- Processor and model
     processor = WhisperProcessor.from_pretrained(args.model_id, task="transcribe")
@@ -264,7 +238,7 @@ def main():
         warmup_steps=args.warmup_steps,
 
         # >>> ensure ints, not None
-        max_steps=args.max_steps if use_max_steps else 0,
+        # max_steps=args.max_steps if use_max_steps else 0, # NOTE: QUICK FIX BUT IDK WHY IT DOESNT WORK UNCOMMENTED
         num_train_epochs=args.num_train_epochs if not use_max_steps else 1.0,
         # <<<
 

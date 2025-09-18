@@ -162,18 +162,6 @@ def run_cleaning_pipeline(wav_path: str, work_dir: str) -> str:
 # Core ingestion
 # -----------------------
 
-def balanced_take(iterable: Iterable[Dict], max_count: Optional[int]) -> List[Dict]:
-    items = []
-    if max_count is None:
-        for item in iterable:
-            items.append(item)
-        return items
-    for idx, item in enumerate(iterable):
-        if idx >= max_count:
-            break
-        items.append(item)
-    return items
-
 
 def split_rows(rows: List[Dict[str, str]], ratios: SplitRatios) -> Tuple[List[Dict], List[Dict], List[Dict]]:
     random.shuffle(rows)
@@ -220,7 +208,7 @@ def ingest(config: Dict, out_dir: str) -> None:
                 # Unknown dataset; skip for now
                 continue
 
-            taken = balanced_take(iterable, balanced_count)
+            taken = list(iterable)[:balanced_count]
             for sample in taken:
                 uid = str(uuid.uuid4())[:8]
                 file_name = f"{lang_key}_{accent_code}_{uid}.wav"

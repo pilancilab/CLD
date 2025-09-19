@@ -32,3 +32,4 @@ noisereduce==3.0.3
 audiomentations==0.43.1
 jax==0.7.2
 optax==0.2.6
+flax==0.11.2

@@ -88,7 +88,7 @@ def load_data(dataset_path: str, target_lang: str = 'en', caller_script: str = N
         if hidden is None:
             continue  # Skip invalid audio
         
-        label = 1.0 if sample['language'] == target_lang else -1.0
+        label = 1.0 if sample['lang'] == target_lang else -1.0
         features.append(hidden)
         labels.append(label)
         valid_count += 1

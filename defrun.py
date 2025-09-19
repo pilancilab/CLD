@@ -29,7 +29,7 @@ class RunResults(NamedTuple):
     model_path: str
 
 
-def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, output_dir):
+def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, output_dir, target_lang):
     """
     Run the CRONOS training pipeline for CVX-DPO
     
@@ -50,8 +50,7 @@ def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, 
     global_best_delta_params = {}
 
     # Load the training and test data
-    #Atr, ytr, Atst, ytst, ntr, ntst = load_data(model_name, data_seed)
-    Atr, ytr, Atst, ytst, ntr, ntst = load_data(data_dir, data_seed, caller_script="defrun")
+    Atr, ytr, Atst, ytst, ntr, ntst = load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun")
 
     ##### CRONOS #####
     # Number of neurons in the convex network 

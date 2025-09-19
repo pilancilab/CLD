@@ -36,6 +36,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name', type=str, required=True)
 parser.add_argument('--data_dir', type=str, required=True)
+parser.add_argument('--target_lang', type=str, required=False, default='en')
 parser.add_argument('--output_dir', type=str, required=True)
 args = parser.parse_args()
 model_names = args.model_name
@@ -85,7 +86,7 @@ start_time = time.time()
 
 # run model training and evaluation (returns NamedTuple)
 # results is now a variable, and RunResults is the type
-results: RunResults = run(model_names, args.data_dir, cronos_params, adamW_params, opt_seed, data_seed, args.output_dir)
+results: RunResults = run(model_names, args.data_dir, cronos_params, adamW_params, opt_seed, data_seed, args.output_dir, args.target_lang)
 
 elapsed_time = time.time() - start_time
 

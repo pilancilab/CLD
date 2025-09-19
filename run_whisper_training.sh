@@ -16,7 +16,7 @@ MODEL_ID="openai/whisper-small"  # or whisper-base, whisper-medium, etc.
 OUTPUT_DIR="./models/whisper-multilingual-en-hi"
 LEARNING_RATE=1e-5
 BATCH_SIZE=16
-EPOCHS=5
+EPOCHS=10
 EVAL_STEPS=1000
 SAVE_STEPS=1000
 

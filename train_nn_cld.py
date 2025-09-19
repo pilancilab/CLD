@@ -319,14 +319,12 @@ def main():
     test_results = trainer.evaluate(test_labeled)
     for key, value in test_results.items():
         print(f"test_{key}: {value}")
-    print(f"test_accuracy = {test_results['accuracy']:.4f}")
 
     print("\n=== Final Evaluation ===")
     eval_results = trainer.evaluate()
     for key, value in eval_results.items():
         print(f"{key}: {value}")
 
-    print(f"eval_accuracy = {eval_results['accuracy']:.4f}")
 
     print(f"\n[Info] Saving model to {args.output_dir} …")
     trainer.save_model()

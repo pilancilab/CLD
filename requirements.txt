@@ -30,3 +30,5 @@ huggingface_hub>=0.17.0
 gradio>=3.0.0
 noisereduce==3.0.3
 audiomentations==0.43.1
+jax==0.7.2
+optax=0.2.6

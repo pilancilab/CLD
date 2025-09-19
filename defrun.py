@@ -8,7 +8,7 @@ uses 10 neurons
 import jax
 import numpy as np
 import jax.numpy as jnp
-from solve.utils.gpt2_dataloader import load_data
+from solve.utils.whisper_dataloader import load_data
 from solve.models.cvx_relu_mlp import CVX_ReLU_MLP
 from solve.optimizers.admm import admm
 from solve.experiments.lr_experiment import lr_random_search

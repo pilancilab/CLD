@@ -14,7 +14,7 @@ import torchaudio
 from typing import Tuple
 import os
 
-def load_data(dataset_path: str, target_lang: str = 'en', caller_script: str = None, data_seed: int = 42) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int, int]:
+def load_data(dataset_path: str, target_lang: str = 'en', caller_script: str = None, data_seed: int = 42, dataset_split: str = "train") -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int, int]:
     """
     Load HF dataset, extract pooled Whisper hidden states, return train/test splits.
     
@@ -31,7 +31,7 @@ def load_data(dataset_path: str, target_lang: str = 'en', caller_script: str = N
     
     # Load train split (main data for training)
     dataset = load_from_disk(dataset_path)
-    train_data = dataset['train']
+    train_data = dataset[dataset_split]
     print(f"Loaded {len(train_data)} train samples")
     
     # Load Whisper encoder
@@ -107,25 +107,27 @@ def load_data(dataset_path: str, target_lang: str = 'en', caller_script: str = N
     perm = np.random.permutation(n)
     A = A[perm]
     y = y[perm]
+
+    return A, y
     
     # Split logic
-    if caller_script == "defrun":
-        # 90% for convex training (80/20 within)
-        split_idx = int(0.9 * n)
-        ntr = int(0.8 * split_idx)
-        ntst = split_idx - ntr
-        Atr = A[:ntr]
-        Atst = A[ntr:split_idx]
-        ytr = y[:ntr]
-        ytst = y[ntr:split_idx]
-    else:
-        # Full 80/20
-        ntr = int(0.8 * n)
-        ntst = n - ntr
-        Atr = A[:ntr]
-        Atst = A[ntr:]
-        ytr = y[:ntr]
-        ytst = y[ntr:]
+    # if caller_script == "defrun":
+    #     # 90% for convex training (80/20 within)
+    #     split_idx = int(0.9 * n)
+    #     ntr = int(0.8 * split_idx)
+    #     ntst = split_idx - ntr
+    #     Atr = A[:ntr]
+    #     Atst = A[ntr:split_idx]
+    #     ytr = y[:ntr]
+    #     ytst = y[ntr:split_idx]
+    # else:
+    #     # Full 80/20
+    #     ntr = int(0.8 * n)
+    #     ntst = n - ntr
+    #     Atr = A[:ntr]
+    #     Atst = A[ntr:]
+    #     ytr = y[:ntr]
+    #     ytst = y[ntr:]
     
-    print(f"Train: {ntr} samples, Test: {ntst} samples")
-    return Atr, ytr, Atst, ytst, ntr, ntst
+    # print(f"Train: {ntr} samples, Test: {ntst} samples")
+    # return Atr, ytr, Atst, ytst, ntr, ntst

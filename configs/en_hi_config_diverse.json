@@ -1,0 +1,120 @@
+{
+    "name": "en + hi binary dataset",
+    "languages": {
+        "en": {
+            "accents": [
+                {
+                    "code": "hi",
+                    "column_name": "India and South Asia (India, Sri Lanka)",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "ur",
+                    "column_name": " Pakistan",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "ne",
+                    "column_name": "Nepali",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "gu",
+                    "column_name": "East African Khoja",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "en",
+                    "column_name": "Non native speaker",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "en",
+                    "column_name": "Singaporean English",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "en",
+                    "column_name": "Malaysian English",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "en",
+                    "column_name": "Hong Kong English",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "en",
+                    "column_name": "Filipino",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "en",
+                    "column_name": "Australian English",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "hi": {
+            "accents": [
+                {
+                    "accents": [
+                        {
+                            "code": "hi",
+                            "column_name": "Hindi",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "te",
+                            "column_name": "Telugu",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "kok",
+                            "column_name": "Konkani",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "bn",
+                            "column_name": "Bengali",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "mr",
+                            "column_name": "Marathi",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "brx",
+                            "column_name": "Bodo",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "or",
+                            "column_name": "Odia",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "ml",
+                            "column_name": "Malayalam",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "ne",
+                            "column_name": "Nepali",
+                            "dataset": "lahaja"
+                        },
+                        {
+                            "code": "ks",
+                            "column_name": "Kashmiri",
+                            "dataset": "lahaja"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "params": {
+        "balanced_count": 320
+    }
+}

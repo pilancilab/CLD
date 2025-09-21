@@ -63,10 +63,13 @@ def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
 def get_nn_pipeline(whisper_path, cld_path, cld_type, lang1, lang2):
     whisper = load_whisper(whisper_path)
     d_model = whisper.config.d_model
-    if cld_path == "nn":
+    if cld_type == "nn":
+        state = load_file(cld_path)
+        classifier_state = {k.replace('classifier.', ''): v for k, v in state.items() if k.startswith('classifier.')}
+
         head = LangDetectHead(d_model).to(torch.cuda.current_device(), dtype=torch.float16)
-        head.classifier.load_state_dict(cld_path)
-    elif cld_path == "cvx":
+        head.classifier.load_state_dict(classifier_state)
+    elif cld_type == "cvx":
         with open(cld_path, 'rb') as f:
             head = pickle.load(f)
 

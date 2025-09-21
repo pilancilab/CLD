@@ -36,6 +36,7 @@ def main():
     model = get_nn_pipeline(
         whisper_path=args.whisper_path,
         cld_path=args.cld_path,
+        cld_type=args.cld_type,
         lang1=args.lang1,
         lang2=args.lang2
     )

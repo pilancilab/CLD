@@ -24,32 +24,32 @@
                     "dataset": "common_voice"
                 },
                 {
-                    "code": "en",
+                    "code": "x-nns",
                     "column_name": "Non native speaker",
                     "dataset": "common_voice"
                 },
                 {
-                    "code": "en",
+                    "code": "sg",
                     "column_name": "Singaporean English",
                     "dataset": "common_voice"
                 },
                 {
-                    "code": "en",
+                    "code": "my",
                     "column_name": "Malaysian English",
                     "dataset": "common_voice"
                 },
                 {
-                    "code": "en",
+                    "code": "hk",
                     "column_name": "Hong Kong English",
                     "dataset": "common_voice"
                 },
                 {
-                    "code": "en",
+                    "code": "ph",
                     "column_name": "Filipino",
                     "dataset": "common_voice"
                 },
                 {
-                    "code": "en",
+                    "code": "au",
                     "column_name": "Australian English",
                     "dataset": "common_voice"
                 }
@@ -58,58 +58,54 @@
         "hi": {
             "accents": [
                 {
-                    "accents": [
-                        {
-                            "code": "hi",
-                            "column_name": "Hindi",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "te",
-                            "column_name": "Telugu",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "kok",
-                            "column_name": "Konkani",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "bn",
-                            "column_name": "Bengali",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "mr",
-                            "column_name": "Marathi",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "brx",
-                            "column_name": "Bodo",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "or",
-                            "column_name": "Odia",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "ml",
-                            "column_name": "Malayalam",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "ne",
-                            "column_name": "Nepali",
-                            "dataset": "lahaja"
-                        },
-                        {
-                            "code": "ks",
-                            "column_name": "Kashmiri",
-                            "dataset": "lahaja"
-                        }
-                    ]
+                    "code": "hi",
+                    "column_name": "Hindi",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "te",
+                    "column_name": "Telugu",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "kok",
+                    "column_name": "Konkani",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "bn",
+                    "column_name": "Bengali",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "mr",
+                    "column_name": "Marathi",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "brx",
+                    "column_name": "Bodo",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "or",
+                    "column_name": "Odia",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "ml",
+                    "column_name": "Malayalam",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "ne",
+                    "column_name": "Nepali",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "ks",
+                    "column_name": "Kashmiri",
+                    "dataset": "lahaja"
                 }
             ]
         }

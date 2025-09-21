@@ -210,6 +210,6 @@ __marimo__/
 data/
 
 wandb/
-models/
+/models/
 
 .DS_Store

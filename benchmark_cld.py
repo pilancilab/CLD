@@ -103,6 +103,56 @@ def main():
     artifact.add(table, "classification_report_table")
     wandb.log_artifact(artifact)
 
+    # Per-accent analysis
+    if 'accent' in test_ds.features:
+        true_accents = [x["accent"] for x in test_ds]
+        unique_accents = set(true_accents)
+        
+        per_accent_data = []
+        
+        for accent in sorted(unique_accents):
+            mask = [a == accent for a in true_accents]
+            
+            filtered_true_lang = [t for t, m in zip(true_language_ids, mask) if m]
+            filtered_pred_lang = [p for p, m in zip(pred_language_ids, mask) if m]
+            filtered_true_text = [t for t, m in zip(true_texts, mask) if m]
+            filtered_pred_text = [p for p, m in zip(pred_texts, mask) if m]
+            
+            if len(filtered_true_lang) == 0:
+                continue
+            
+            acc_wer = 100.0 * wer_metric.compute(predictions=filtered_pred_text, references=filtered_true_text)
+            acc_cer = 100.0 * cer_metric.compute(predictions=filtered_pred_text, references=filtered_true_text)
+            acc_report = classification_report(filtered_true_lang, filtered_pred_lang, output_dict=True)
+            
+            wandb.log({
+                f"eval/accent/{accent}/wer": acc_wer,
+                f"eval/accent/{accent}/cer": acc_cer,
+                f"eval/accent/{accent}/accuracy": acc_report['accuracy'],
+                f"eval/accent/{accent}/macro_precision": acc_report['macro avg']['precision'],
+                f"eval/accent/{accent}/macro_recall": acc_report['macro avg']['recall'],
+                f"eval/accent/{accent}/macro_f1": acc_report['macro avg']['f1-score'],
+                f"eval/accent/{accent}/macro_support": acc_report['macro avg']['support'],
+            })
+            
+            # Per-class per-accent (optional, but for completeness)
+            for lang in [args.lang1, args.lang2]:
+                if lang in acc_report:
+                    wandb.log({
+                        f"eval/accent/{accent}/{lang}_precision": acc_report[lang]['precision'],
+                        f"eval/accent/{accent}/{lang}_recall": acc_report[lang]['recall'],
+                        f"eval/accent/{accent}/{lang}_f1": acc_report[lang]['f1-score'],
+                        f"eval/accent/{accent}/{lang}_support": acc_report[lang]['support'],
+                    })
+            
+            # Collect for table
+            per_accent_data.append([accent, acc_wer, acc_cer, acc_report['accuracy'], acc_report['macro avg']['f1-score'], acc_report['macro avg']['support']])
+        
+        if per_accent_data:
+            per_accent_columns = ["accent", "wer", "cer", "accuracy", "macro_f1", "support"]
+            per_accent_table = wandb.Table(data=per_accent_data, columns=per_accent_columns)
+            wandb.log({"per_accent_metrics": per_accent_table})
+
     # Optional: Print for local output
     print(f"WER: {wer:.2f}%")
     print(f"CER: {cer:.2f}%")

@@ -35,7 +35,7 @@ def lang_to_id(whisper, lang):
 
 def id_to_lang(whisper, tid):
     id_to_lang_mapping =  dict(zip(whisper.generation_config.lang_to_id.values(), whisper.generation_config.lang_to_id.keys()))
-    return id_to_lang_mapping[tid][2:-2]
+    return id_to_lang_mapping.get(tid, "    ")[2:-2]
 
 def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
     

@@ -1,11 +1,9 @@
 import os, time, torch, types, pickle
 import torch.nn as nn
 from safetensors.torch import load_file
-from transformers import WhisperForConditionalGeneration, WhisperProcessor
+from transformers import WhisperForConditionalGeneration, WhisperProcessor, GenerationConfig
 
 dtype = torch.float16
-
-lang_tokens_glob = []
 
 def load_whisper(whisper_path):
     whisper = WhisperForConditionalGeneration.from_pretrained(whisper_path, device_map="auto", dtype=dtype)
@@ -44,20 +42,12 @@ def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
             return [0 if x < 0 else 1 for x in logits]
 
     def _custom_retrieve_init_tokens(self, input_features, batch_size, generation_config=None, **kwargs):
-        global lang_tokens_glob
         encoder_outputs = self.model.encoder(input_features, return_dict=True)
         hidden = encoder_outputs.last_hidden_state
         class_ids = head_caller(self, hidden)
         
         # Assuming 0 = lang1, 1 = lang2
-        lang_tokens = []
-        for class_id in class_ids:
-            if class_id == 0:
-                lang_tokens.append(lang_to_id(self, lang1))
-                lang_tokens_glob.append(lang1)
-            else:
-                lang_tokens.append(lang_to_id(self, lang2))
-                lang_tokens_glob.append(lang2)
+        lang_tokens = [lang_to_id(self, lang1) if class_id == 0 else lang_to_id(self, lang2) for class_id in class_ids]
         
         # Return init tokens: [start, lang, transcribe]
         init_tokens = [[50258, lang_token, 50359] for lang_token in lang_tokens]
@@ -104,15 +94,13 @@ def get_nn_pipeline(whisper_path, cld_path, cld_type, lang1, lang2):
     return whisper, processor
 
 def inference(model, processor, audio):
-    global lang_tokens_glob
-    lang_tokens_glob = []
     input_features = processor(audio, sampling_rate=16000, return_tensors="pt").input_features
     
     # Place on model's entry device
     first_device = next(model.parameters()).device
     input_features = input_features.to(first_device, dtype=dtype)
     
-    predicted_ids = model.generate(input_features)
-    # language_tokens = [processor.decode([pred[1]], skip_special_tokens=False)[2:-2] for pred in predicted_ids]
+    predicted_ids = model.generate(input_features, generation_config=GenerationConfig(suppress_tokens=[], begin_suppress_tokens=None))
+    language_tokens = [processor.decode([pred[1]], skip_special_tokens=False)[2:-2] for pred in predicted_ids]
     transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-    return lang_tokens_glob, transcription
+    return language_tokens, transcription

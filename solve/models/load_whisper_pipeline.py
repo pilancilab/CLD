@@ -39,7 +39,7 @@ def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
             logits = self.lang_detect_head(hidden)
             return logits.argmax(dim=-1).tolist()
         elif cld_type == "cvx":
-            pooled = hidden.mean(dim=1).cpu().numpy()  # Move to CPU and numpy for predict
+            pooled = hidden.mean(dim=1).cpu().detach().numpy()  # Move to CPU and numpy for predict
             logits = self.lang_detect_head.predict(pooled, self.lang_detect_head.theta1, self.lang_detect_head.theta2)
             return [0 if x < 0 else 1 for x in logits]
 

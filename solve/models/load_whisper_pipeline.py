@@ -1,7 +1,7 @@
 import os, time, torch, types, pickle
 import torch.nn as nn
 from safetensors.torch import load_file
-from transformers import WhisperForConditionalGeneration, WhisperProcessor, GenerationConfig
+from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 dtype = torch.float16
 
@@ -9,7 +9,8 @@ def load_whisper(whisper_path):
     whisper = WhisperForConditionalGeneration.from_pretrained(whisper_path, device_map="auto", dtype=dtype)
     whisper.config.forced_decoder_ids = None
     whisper.generation_config.forced_decoder_ids = None
-    # No .to() - device_map handles it
+    whisper.generation_config.suppress_tokens = None  # or None
+    whisper.generation_config.begin_suppress_tokens = None  # or None
     return whisper
 
 class LangDetectHead(nn.Module):
@@ -100,7 +101,7 @@ def inference(model, processor, audio):
     first_device = next(model.parameters()).device
     input_features = input_features.to(first_device, dtype=dtype)
     
-    predicted_ids = model.generate(input_features, generation_config=GenerationConfig(suppress_tokens=[], begin_suppress_tokens=None))
+    predicted_ids = model.generate(input_features)
     language_tokens = [processor.decode([pred[1]], skip_special_tokens=False)[2:-2] for pred in predicted_ids]
     transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
     return language_tokens, transcription

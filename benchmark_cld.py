@@ -4,6 +4,7 @@ from solve.models.load_whisper_pipeline import get_nn_pipeline, inference
 from sklearn.metrics import classification_report
 from transformers import WhisperProcessor
 import evaluate
+import wandb
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate Whisper model on a dataset for language detection and transcription.")
@@ -19,19 +20,20 @@ def parse_args():
 def main():
     args = parse_args()
 
+    wandb.init()
+
     wer_metric = evaluate.load("wer")
     cer_metric = evaluate.load("cer")
 
     ds = load_from_disk(args.dataset_path)
 
-    model = get_nn_pipeline(
+    model, processor = get_nn_pipeline(
         whisper_path=args.whisper_path,
         cld_path=args.cld_path,
         cld_type=args.cld_type,
         lang1=args.lang1,
         lang2=args.lang2
     )
-    processor = WhisperProcessor.from_pretrained(args.whisper_path)
 
     # Use test split consistently
     test_ds = ds["test"]

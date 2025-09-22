@@ -61,7 +61,10 @@ def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
     return _custom_retrieve_init_tokens
 
 def get_nn_pipeline(whisper_path, cld_path, cld_type, lang1, lang2):
-    processor = WhisperProcessor.from_pretrained(whisper_path)
+    try:
+        processor = WhisperProcessor.from_pretrained(whisper_path)
+    except Exception:
+        processor = WhisperProcessor.from_pretrained("openai/whisper-small")
     whisper = load_whisper(whisper_path)
     d_model = whisper.config.d_model
 
@@ -88,7 +91,7 @@ def get_nn_pipeline(whisper_path, cld_path, cld_type, lang1, lang2):
         whisper.lang_detect_head = head
         whisper._retrieve_init_tokens = types.MethodType(custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type), whisper)
 
-    return whisper
+    return whisper, processor
 
 def inference(model, processor, audio):
     input_features = processor(audio, sampling_rate=16000, return_tensors="pt").input_features

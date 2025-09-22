@@ -79,24 +79,12 @@ def detect_language_vanilla(model, input_features):
     logits = model_output.logits[:, -1, :]  # Shape: (batch_size, vocab_size)
     
     # Language tokens in Whisper multilingual models are IDs 50263 to 50361 (99 languages)
-    LANGUAGE_TOKEN_START = 50263
-    NUM_LANGUAGES = 99
-    language_logits = logits[:, LANGUAGE_TOKEN_START : LANGUAGE_TOKEN_START + NUM_LANGUAGES]
-    
     # Compute probabilities and detect the most likely language per batch item
-    language_probs = torch.softmax(language_logits, dim=-1)
+    language_probs = torch.softmax(logits, dim=-1)
     language_indices = torch.argmax(language_probs, dim=-1)  # Shape: (batch_size,)
     
     # Map indices to language codes (sorted list of Whisper's 99 supported languages)
-    languages = [
-        "af", "am", "ar", "as", "az", "ba", "be", "bg", "bn", "bo", "br", "bs", "ca", "cs", "cy", "da", "de",
-        "el", "en", "es", "et", "eu", "fa", "fi", "fo", "fr", "gl", "gu", "haw", "he", "hi", "hr", "ht", "hu",
-        "hy", "id", "is", "it", "ja", "jw", "ka", "kk", "km", "kn", "ko", "la", "lb", "ln", "lo", "lt", "lv",
-        "mg", "mi", "mk", "ml", "mn", "mr", "ms", "mt", "my", "ne", "nl", "nn", "no", "oc", "pa", "pl", "ps",
-        "pt", "ro", "ru", "sa", "sd", "si", "sk", "sl", "sn", "so", "sq", "sr", "su", "sv", "sw", "ta", "te",
-        "tg", "th", "tk", "tl", "tr", "tt", "uk", "ur", "uz", "vi", "yi", "yo", "yue", "zh"
-    ]
-    detected_languages = [languages[idx.item()] for idx in language_indices]
+    detected_languages = [id_to_lang(model, x.item()) for x in language_indices]
     
     # Return list of detected languages (one per batch item); also return probs if needed
     return detected_languages  # e.g., ['en'] for batch_size=1

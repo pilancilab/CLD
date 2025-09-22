@@ -35,13 +35,14 @@ import time
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name', type=str, required=True)
+parser.add_argument('--data_dir', type=str, required=True)
+parser.add_argument('--target_lang', type=str, required=False, default='en')
+parser.add_argument('--output_dir', type=str, required=True)
 args = parser.parse_args()
 model_names = args.model_name
 
 # List of model names; these are folders where POS and NEG features are saved per model
 # the input data directory is mapped in gpt2_dataloader.py
-
-OUTPUT_DIR = f'/home/miria/CVXDPO/cvxNN/cvxNN_trained_{os.path.basename(os.path.normpath(model_names))}'
 
 # Tune rho, admm_iters, pcg_iters, take out jit for adamW
 # pcg_iters most important
@@ -66,7 +67,7 @@ wandb.init(
         "adamW_params": adamW_params,
         "opt_seed": opt_seed,
         "data_seed": data_seed,
-        "output_dir": OUTPUT_DIR,
+        "output_dir": args.output_dir,
         "rank": cronos_params["rank"],
         "beta": cronos_params["beta"],
         "rho": cronos_params["rho"],
@@ -85,7 +86,7 @@ start_time = time.time()
 
 # run model training and evaluation (returns NamedTuple)
 # results is now a variable, and RunResults is the type
-results: RunResults = run(model_names, cronos_params, adamW_params, opt_seed, data_seed, OUTPUT_DIR)
+results: RunResults = run(model_names, args.data_dir, cronos_params, adamW_params, opt_seed, data_seed, args.output_dir, args.target_lang)
 
 elapsed_time = time.time() - start_time
 
@@ -137,7 +138,7 @@ print(f"Stage 1 Training completed in {elapsed_time:.2f} seconds")
 print(f"Estimated TFLOPS from Stage 1: {estimated_tflops:.2f}")
 
 # Save results for bash (double saved in defrun)
-log_out_path = os.path.join(OUTPUT_DIR, "cronos_results.txt")
+log_out_path = os.path.join(args.output_dir, "cronos_results.txt")
 with open(log_out_path, "w") as f:
     for k, v in data.items():
         f.write(f"{k}: {v[0]}\n")

@@ -1,0 +1,46 @@
+{
+    "name": "en + hi binary dataset",
+    "languages": {
+        "en": {
+            "accents": [
+                {
+                    "code": "hi",
+                    "column_name": "India and South Asia (India",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "ur",
+                    "column_name": " Pakistan",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "us",
+                    "column_name": "United States English",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "hi": {
+            "accents": [
+                {
+                    "code": "hi",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "te",
+                    "column_name": "Telugu",
+                    "dataset": "lahaja"
+                },
+                {
+                    "code": "kok",
+                    "column_name": "Konkani",
+                    "dataset": "lahaja"
+                }
+            ]
+        }
+    }, 
+    "params": {
+        "balanced_count": 500 
+    }
+}

@@ -12,7 +12,7 @@ noisereduce>=3.0.0
 pydub>=0.25.1
 
 # Whisper training dependencies (matching HF documentation)
-transformers>=4.35.0
+transformers==4.56.2
 torch>=2.0.0
 torchaudio>=2.0.0
 accelerate>=0.20.0
@@ -30,3 +30,6 @@ huggingface_hub>=0.17.0
 gradio>=3.0.0
 noisereduce==3.0.3
 audiomentations==0.43.1
+jax==0.7.2
+optax==0.2.6
+flax==0.11.2

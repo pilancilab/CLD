@@ -50,11 +50,17 @@ def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
         class_ids = head_caller(self, hidden)
         
         # Assuming 0 = lang1, 1 = lang2
-        lang_tokens = [lang_to_id(self, lang1) if class_id == 0 else lang_to_id(self, lang2) for class_id in class_ids]
+        lang_tokens = []
+        for class_id in class_ids:
+            if class_id == 0:
+                lang_tokens.append(lang_to_id(self, lang1))
+                lang_tokens_glob.append(lang1)
+            else:
+                lang_tokens.append(lang_to_id(self, lang2))
+                lang_tokens_glob.append(lang2)
         
         # Return init tokens: [start, lang, transcribe]
         init_tokens = [[50258, lang_token, 50359] for lang_token in lang_tokens]
-        lang_tokens_glob.extend(lang_tokens)
         
         init_tokens_tensor = torch.tensor(init_tokens, 
                                           dtype=torch.long, 

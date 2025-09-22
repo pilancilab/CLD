@@ -1,7 +1,7 @@
 import os, time, torch, types, pickle
 import torch.nn as nn
 from safetensors.torch import load_file
-from transformers import WhisperForConditionalGeneration, WhisperProcessor, GenerationConfig
+from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 dtype = torch.float16
 
@@ -32,6 +32,10 @@ class LangDetectHead(nn.Module):
 def lang_to_id(whisper, lang):
     lang_code = f"<|{lang}|>"
     return whisper.generation_config.lang_to_id[lang_code]
+
+def id_to_lang(whisper, tid):
+    id_to_lang_mapping =  dict(zip(whisper.generation_config.lang_to_id.values(), whisper.generation_config.lang_to_id.keys()))
+    return id_to_lang_mapping[tid][2:-2]
 
 def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
     
@@ -66,12 +70,45 @@ def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
 
     return _custom_retrieve_init_tokens
 
+def detect_language_vanilla(model, input_features):
+    # 50258 is the token for transcribing
+    batch_size = input_features.shape[0]
+    device = input_features.device
+    decoder_input_ids = torch.full((batch_size, 1), 50258, dtype=torch.long, device=device)
+    model_output = model(input_features, decoder_input_ids=decoder_input_ids)
+    logits = model_output.logits[:, -1, :]  # Shape: (batch_size, vocab_size)
+    
+    # Language tokens in Whisper multilingual models are IDs 50263 to 50361 (99 languages)
+    LANGUAGE_TOKEN_START = 50263
+    NUM_LANGUAGES = 99
+    language_logits = logits[:, LANGUAGE_TOKEN_START : LANGUAGE_TOKEN_START + NUM_LANGUAGES]
+    
+    # Compute probabilities and detect the most likely language per batch item
+    language_probs = torch.softmax(language_logits, dim=-1)
+    language_indices = torch.argmax(language_probs, dim=-1)  # Shape: (batch_size,)
+    
+    # Map indices to language codes (sorted list of Whisper's 99 supported languages)
+    languages = [
+        "af", "am", "ar", "as", "az", "ba", "be", "bg", "bn", "bo", "br", "bs", "ca", "cs", "cy", "da", "de",
+        "el", "en", "es", "et", "eu", "fa", "fi", "fo", "fr", "gl", "gu", "haw", "he", "hi", "hr", "ht", "hu",
+        "hy", "id", "is", "it", "ja", "jw", "ka", "kk", "km", "kn", "ko", "la", "lb", "ln", "lo", "lt", "lv",
+        "mg", "mi", "mk", "ml", "mn", "mr", "ms", "mt", "my", "ne", "nl", "nn", "no", "oc", "pa", "pl", "ps",
+        "pt", "ro", "ru", "sa", "sd", "si", "sk", "sl", "sn", "so", "sq", "sr", "su", "sv", "sw", "ta", "te",
+        "tg", "th", "tk", "tl", "tr", "tt", "uk", "ur", "uz", "vi", "yi", "yo", "yue", "zh"
+    ]
+    detected_languages = [languages[idx.item()] for idx in language_indices]
+    
+    # Return list of detected languages (one per batch item); also return probs if needed
+    return detected_languages  # e.g., ['en'] for batch_size=1
+
+
 def get_nn_pipeline(whisper_path, cld_path, cld_type, lang1, lang2):
     try:
         processor = WhisperProcessor.from_pretrained(whisper_path)
     except Exception:
         processor = WhisperProcessor.from_pretrained("openai/whisper-small")
     whisper = load_whisper(whisper_path)
+    whisper.cld_type = cld_type
     d_model = whisper.config.d_model
 
     change_head = True
@@ -108,7 +145,9 @@ def inference(model, processor, audio):
     first_device = next(model.parameters()).device
     input_features = input_features.to(first_device, dtype=dtype)
     
-    predicted_ids = model.generate(input_features, generation_config=GenerationConfig(suppress_tokens=[], begin_suppress_tokens=None))
+    predicted_ids = model.generate(input_features)
     # language_tokens = [processor.decode([pred[1]], skip_special_tokens=False)[2:-2] for pred in predicted_ids]
+    if model.cld_type == "vanilla":
+        lang_tokens_glob = detect_language_vanilla(model, input_features)
     transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
     return lang_tokens_glob, transcription

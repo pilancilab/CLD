@@ -1,6 +1,6 @@
 import argparse
 from datasets import load_from_disk
-from solve.models.load_whisper_pipeline import get_nn_pipeline, inference
+from solve.models.load_whisper_pipeline import get_nn_pipeline, inference, detect_language_vanilla
 from sklearn.metrics import classification_report
 from transformers import WhisperProcessor
 import evaluate

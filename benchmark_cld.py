@@ -105,7 +105,7 @@ def main():
 
     # Per-accent analysis
     if 'accent' in test_ds.features:
-        true_accents = [x["accent"] for x in test_ds]
+        true_accents = [x["lang"]+"-"+x["accent"] for x in test_ds]
         unique_accents = set(true_accents)
         
         per_accent_data = []

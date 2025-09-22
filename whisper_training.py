@@ -68,6 +68,9 @@ class DataCollatorSpeechSeq2SeqWithPadding:
         if (labels[:, 0] == self.decoder_start_token_id).all().cpu().item():
             labels = labels[:, 1:]
 
+        # Do not compute loss on the language token (first token in labels after slicing)
+        labels[:, 0] = -100
+
         batch["labels"] = labels
 
         return batch

@@ -46,6 +46,8 @@ from transformers import (
 # Helpers
 # -----------------------
 
+COMPUTE_LOSS_ON_LANG_TOKEN = False
+
 @dataclass
 class DataCollatorSpeechSeq2SeqWithPadding:
     processor: WhisperProcessor
@@ -69,7 +71,8 @@ class DataCollatorSpeechSeq2SeqWithPadding:
             labels = labels[:, 1:]
 
         # Do not compute loss on the language token (first token in labels after slicing)
-        labels[:, 0] = -100
+        if not COMPUTE_LOSS_ON_LANG_TOKEN:
+            labels[:, 0] = -100
 
         batch["labels"] = labels
 
@@ -142,6 +145,7 @@ def parse_args():
     p.add_argument("--data_dir", type=str, required=True, help="Path to preprocessed data file")
     p.add_argument("--output_dir", type=str, default="./whisper-out", help="Where to save checkpoints/logs")
     p.add_argument("--model_id", type=str, default="openai/whisper-small", help="Whisper checkpoint (e.g., tiny, base, small, medium, large-v3)")
+    p.add_argument("--predict_lang_token", type=bool, action='store_true', help="Compute loss on lang token")
     p.add_argument("--default_language", type=str, default=None, help="Optional default language code (e.g., 'en'); per-example 'lang' still applied")
     p.add_argument("--wandb_project", type=str, default=None, help="WANDB project name (enables wandb if set)")
     p.add_argument("--wandb_entity", type=str, default=None, help="WANDB entity (optional)")
@@ -168,7 +172,9 @@ def parse_args():
 
 
 def main():
+    global COMPUTE_LOSS_ON_LANG_TOKEN
     args = parse_args()
+    COMPUTE_LOSS_ON_LANG_TOKEN = args.predict_lang_token
 
     # Optional WANDB
     if args.wandb_project:

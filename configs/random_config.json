@@ -1,0 +1,67 @@
+{
+    "name": "id + msi + ms + zh-tw + zh-hk + zh binary dataset",
+    "languages": {
+        "id": {
+            "accents": [
+                {
+                    "code": "id",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "msi": {
+            "accents": [
+                {
+                    "code": "msi",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "ms": {
+            "accents": [
+                {
+                    "code": "ms",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "zh-tw": {
+            "accents": [
+                {
+                    "code": "zh-tw",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "zh-hk": {
+            "accents": [
+                {
+                    "code": "zh-hk",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "zh": {
+            "accents": [
+                {
+                    "code": "zh",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        }
+    },
+    "params": {
+        "samples_per_class": 1000,
+        "split": {
+            "train": 0.0,
+            "eval": 0.0,
+            "test": 1.0
+        }
+    }
+}

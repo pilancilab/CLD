@@ -170,6 +170,11 @@ def parse_args():
     p.add_argument("--push_to_hub", action="store_true", help="If set, push best model to HF Hub (requires auth)")
     return p.parse_args()
 
+def freeze_whisper_layers(model, num_layers_to_freeze=4):
+    for i in range(num_layers_to_freeze):
+        for param in model.model.encoder.layers[i].parameters():
+            param.requires_grad = False
+    print(f"Froze first {num_layers_to_freeze} encoder layers.")
 
 def main():
     global COMPUTE_LOSS_ON_LANG_TOKEN
@@ -198,6 +203,8 @@ def main():
     model.generation_config.forced_decoder_ids = None
     # For safety, set task (transcribe) but we won't force language
     model.generation_config.task = "transcribe"
+
+    freeze_whisper_layers(model, num_layers_to_freeze=4)
 
     # --- Map functions
     prepare_dataset = prepare_dataset_function(processor)

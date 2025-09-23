@@ -31,6 +31,6 @@
         }
     }, 
     "params": {
-        "balanced_count": 50 
+        "samples_per_class": 150 
     }
 }

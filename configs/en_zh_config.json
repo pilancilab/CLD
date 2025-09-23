@@ -1,0 +1,31 @@
+{
+    "name": "en + hi binary dataset",
+    "languages": {
+        "en": {
+            "accents": [
+                {
+                    "code": "sg",
+                    "column_name": "Singaporean English",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "my",
+                    "column_name": "Malaysian English",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "zh": {
+            "accents": [
+                {
+                    "code": "zh",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        }
+    },
+    "params": {
+        "samples_per_class": 320
+    }
+}

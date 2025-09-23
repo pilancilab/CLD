@@ -236,7 +236,7 @@ def ingest(config, out_path):
     """Ingests all the datasets in cfg and outputs 3 files in the directory (train.parquet, val.parquet, test.parquet)"""
 
     params = config.get("params", {})
-    balanced_count = params.get("balanced_count")
+    samples_per_class = params.get("samples_per_class")
     split_cfg = params.get("split", None)
     split = SplitRatios(**split_cfg) if isinstance(split_cfg, dict) else SplitRatios()
 
@@ -263,6 +263,7 @@ def ingest(config, out_path):
     processed_samples = []
 
     for lang_code, lang_dict in config.get("languages", {}).items():
+        samples_per_accent = round(samples_per_class/len(lang_dict.get("accents", [])) if samples_per_class is not None else 1e9)
         for accent_params in lang_dict.get("accents", []):
             loader_func = LOADER_FUNC_MAPPING.get(accent_params.get("dataset"))
             if(not loader_func) :
@@ -274,7 +275,7 @@ def ingest(config, out_path):
             filtered = []
             print(f'Ingesting {lang_code}_{accent_params.get("code")} from {accent_params.get("dataset")} dataset')
             for a in iterable:
-                if len(filtered) > balanced_count:
+                if len(filtered) == samples_per_accent:
                     break
                 if(is_audio_in_length_range(a["audio"])):
                     filtered.append(a)

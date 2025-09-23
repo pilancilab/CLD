@@ -16,7 +16,7 @@ python whisper_training.py \
     --model_id "openai/whisper-small" \
     --output_dir "./models/whisper-multilingual-en-zh" \
     --learning_rate 1e-5 \
-    --num_train_epochs 10 \
+    --num_train_epochs 3 \
     --wandb_project "$WANDB_PROJECT" \
     --eval_strategy epoch \
     --save_strategy epoch \

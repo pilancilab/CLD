@@ -10,7 +10,7 @@ from pydub import AudioSegment
 import numpy as np
 from scipy.signal import resample
 import noisereduce as nr  
-from datasets import Dataset
+from datasets import Dataset, Features, Value, Audio
 from tqdm import tqdm
 
 import torch
@@ -190,15 +190,13 @@ def load_lahaja(lang, accent_config, common_voice_dir=None):
     ds = load_dataset("ai4bharat/Lahaja", split="test")
 
     for ex in ds:
-        audio_data = ex.get("audio_filepath", None)
+        audio_data = ex.get("audio", None)  # Changed from "audio_filepath" to "audio"
         if audio_data is not None and isinstance(audio_data, dict):
             array = audio_data.get("array")
             sr = audio_data.get("sampling_rate")
             if array is None or sr is None:
                 continue
         else:
-            # Some variants expose raw bytes in a column (e.g., 'bytes' or 'audio_filepath').
-            # Prefer decoded column if available; otherwise skip.
             continue
         text = ex.get("text", "")
         lang = ex.get("lang", "")
@@ -297,12 +295,19 @@ def ingest(config, out_path):
             
             processed_samples.extend(cleaned)
 
+    features = Features({
+        "audio": Audio(sampling_rate=TARGET_SR),
+        "text": Value("string"),
+        "lang": Value("string"),
+        "accent": Value("string")
+    })
+
     ds = Dataset.from_dict({
         "audio": [sample["audio"] for sample in processed_samples],
         "text": [sample["text"] for sample in processed_samples],
         "lang": [sample["lang"] for sample in processed_samples],
         "accent": [sample["accent"] for sample in processed_samples]
-    })
+    }, features=features)
 
     ds_train_devtest = ds.train_test_split(test_size=split.test+split.val, seed=42)
     ds_devtest = ds_train_devtest['test'].train_test_split(test_size=split.test/(split.test+split.val), seed=42)

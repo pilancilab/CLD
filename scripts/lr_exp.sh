@@ -12,6 +12,7 @@ BASE_WANDB_TAGS="lr-exp"
 
 # External data locations (override via env if needed)
 CV_DIR="${CV_DIR:-${ROOT_DIR}/data/cv-corpus-22.0-2025-06-20}"
+MUSAN_DIR="musan/noise/free-sound"
 
 mkdir -p "${ROOT_DIR}/data/lr_exp"
 
@@ -69,7 +70,9 @@ PY
     python3 "${ROOT_DIR}/data_ingestion.py" \
       --config "${CFG_PATH}" \
       --out "${DATA_DIR}" \
-      --common-voice-dir "${CV_DIR}"
+      --common-voice-dir "${CV_DIR}" \
+      --musan-dir "${MUSAN_DIR}" \
+      --augment
   ) 2>&1 | tee -a "${LOG_FILE}"
 
   echo "[2/6] Training Whisper → ${WHISPER_DIR}"

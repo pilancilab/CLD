@@ -103,6 +103,22 @@ def main():
     artifact.add(table, "classification_report_table")
     wandb.log_artifact(artifact)
 
+    # Per-sample predictions artifact: true language, predicted language, accent code
+    per_sample_columns = ["true_lang", "pred_lang", "accent"]
+    if 'accent' in test_ds.features:
+        accents = [x.get("accent", None) for x in test_ds]
+    else:
+        accents = [None] * len(test_ds)
+
+    per_sample_data = [
+        [t_lang, p_lang, acc]
+        for t_lang, p_lang, acc in zip(true_language_ids, pred_language_ids, accents)
+    ]
+    per_sample_table = wandb.Table(data=per_sample_data, columns=per_sample_columns)
+    preds_artifact = wandb.Artifact("per_sample_predictions", type="predictions")
+    preds_artifact.add(per_sample_table, "per_sample_predictions_table")
+    wandb.log_artifact(preds_artifact)
+
     # Per-accent analysis
     if 'accent' in test_ds.features:
         true_accents = [x["lang"]+"-"+x["accent"] for x in test_ds]

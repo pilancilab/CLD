@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resolve repo root (this script lives in ROOT/scripts/lr_exp.sh)
+# Resolve repo root (this script lives in ROOT/scripts/lr_exp_dry.sh)
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # WANDB setup
@@ -17,7 +17,7 @@ MUSAN_DIR="musan/noise/free-sound"
 # Latest fine-tuned Whisper checkpoint under models/whisper-multilingual-en-zh
 FINETUNE_WHISPER_PATH="$(find "${ROOT_DIR}/models/whisper-multilingual-en-zh" -maxdepth 1 -type d -name 'checkpoint-*' | grep -o '[0-9]\+$' | sort -nr | head -n 1 | xargs -I {} find "${ROOT_DIR}/models/whisper-multilingual-en-zh" -maxdepth 1 -type d -name "checkpoint-{}" | head -n 1)"
 
-mkdir -p "${ROOT_DIR}/data/lr_exp"
+mkdir -p "${ROOT_DIR}/data/lr_exp_dry"
 
 if [[ ! -d "${CV_DIR}" ]]; then
   echo "[WARN] Common Voice directory not found at: ${CV_DIR}" 1>&2
@@ -25,7 +25,7 @@ if [[ ! -d "${CV_DIR}" ]]; then
 fi
 
 shopt -s nullglob
-CONFIG_DIR="${ROOT_DIR}/configs/lr_exp"
+CONFIG_DIR="${ROOT_DIR}/configs/lr_exp_dry"
 CONFIGS=("${CONFIG_DIR}"/*.json)
 
 if [[ ${#CONFIGS[@]} -eq 0 ]]; then
@@ -56,7 +56,7 @@ PY
   read -r LANG1 LANG2 <<< "${LANGS_STR}"
 
   # Per-config output directories
-  RUN_DIR="${ROOT_DIR}/data/lr_exp/${CFG_NAME}"
+  RUN_DIR="${ROOT_DIR}/data/lr_exp_dry/${CFG_NAME}"
   DATA_DIR="${RUN_DIR}/dataset"
   WHISPER_DIR="${RUN_DIR}/whisper"
   NN_DIR="${RUN_DIR}/nn"
@@ -190,5 +190,5 @@ PY
   echo "[6/6] Completed run: ${CFG_NAME} → outputs at ${RUN_DIR}"
 done
 
-echo "\nAll LR experiments complete. Outputs under: ${ROOT_DIR}/data/lr_exp"
+echo "\nAll LR experiments complete. Outputs under: ${ROOT_DIR}/data/lr_exp_dry"
 

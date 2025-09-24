@@ -43,6 +43,7 @@
             "accents": [
                 {
                     "code": "msi",
+                    "override_code": "msi",
                     "column_name": "",
                     "dataset": "common_voice"
                 },
@@ -96,8 +97,8 @@
             "accents": [
                 {
                     "code": "hi",
-                    "column_name": "Hindi",
-                    "dataset": "lahaja"
+                    "column_name": "",
+                    "dataset": "common_voice"
                 },
                 {
                     "code": "te",

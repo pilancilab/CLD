@@ -1,0 +1,75 @@
+{
+    "name": "en zh 100 count binary dataset",
+    "languages": {
+        "en": {
+            "accents": [
+                {
+                    "code": "us",
+                    "column_name": "United States English",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "sg",
+                    "column_name": "Singaporean English",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "my",
+                    "column_name": "Malaysian English",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "hi",
+                    "column_name": "India and South Asia (India",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "ur",
+                    "column_name": " Pakistan",
+                    "dataset": "common_voice"
+                }
+            ]
+        },
+        "zh": {
+            "accents": [
+                {
+                    "code": "tw",
+                    "override_code": "zh-tw",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "hk",
+                    "override_code": "zh-hk",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "zh",   
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "cpx",
+                    "override_code": "cpx",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "cdo",
+                    "override_code": "cdo",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                }
+            ]
+        }
+    },
+    "params": {
+        "samples_per_class": 100,
+        "split": {
+            "train": 0.8,
+            "val": 0.1,
+            "test": 0.1
+        }
+    }
+}

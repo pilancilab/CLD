@@ -64,8 +64,7 @@ PY
   LOG_FILE="${RUN_DIR}/run.log"
   mkdir -p "${RUN_DIR}" "${DATA_DIR}" "${WHISPER_DIR}" "${NN_DIR}" "${CVX_DIR}"
 
-  # Tag runs with lr-exp and the config name
-  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME}"
+  # We'll set WANDB_TAGS and WANDB_NAME per step for clearer run labeling
 
   echo "[1/6] Ingesting data → ${DATA_DIR}"
   (
@@ -79,7 +78,9 @@ PY
   ) 2>&1 | tee -a "${LOG_FILE}"
 
   echo "[2/6] Training Whisper → ${WHISPER_DIR}"
-  RUN_NAME="whisper-small-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
+  RUN_NAME="whisper-finetune-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
+  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},whisper-finetune,${LANG1}-${LANG2}"
+  export WANDB_NAME="${RUN_NAME}"
   (
     set -x
     python3 "${ROOT_DIR}/whisper_training.py" \
@@ -109,6 +110,8 @@ PY
   fi
 
   echo "[3/6] Training NN CLD head → ${NN_DIR}"
+  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},nn,${LANG1}-${LANG2}"
+  export WANDB_NAME="nn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
   (
     set -x
     python3 "${ROOT_DIR}/train_nn_cld.py" \
@@ -119,6 +122,8 @@ PY
   ) 2>&1 | tee -a "${LOG_FILE}"
 
   echo "[4/6] Training CVX model → ${CVX_DIR}"
+  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},cvxnn,${LANG1}-${LANG2}"
+  export WANDB_NAME="cvxnn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
   (
     set -x
     python3 "${ROOT_DIR}/cronos_trainer.py" \
@@ -142,6 +147,8 @@ PY
 
   # NN benchmark (if model file found)
   if [[ -n "${NN_MODEL_FILE}" && -f "${NN_MODEL_FILE}" ]]; then
+    export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},benchmark,nn,${LANG1}-${LANG2}"
+    export WANDB_NAME="bench-nn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
     (
       set -x
       python3 "${ROOT_DIR}/benchmark_cld.py" \
@@ -159,6 +166,8 @@ PY
 
   # CVX benchmark (if model file found)
   if [[ -n "${CVX_MODEL_FILE}" && -f "${CVX_MODEL_FILE}" ]]; then
+    export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},benchmark,cvxnn,${LANG1}-${LANG2}"
+    export WANDB_NAME="bench-cvxnn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
     (
       set -x
       python3 "${ROOT_DIR}/benchmark_cld.py" \
@@ -175,6 +184,8 @@ PY
   fi
 
   # Vanilla benchmark (Whisper's built-in detection)
+  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},benchmark,whisper-vanilla,${LANG1}-${LANG2}"
+  export WANDB_NAME="bench-whisper-vanilla-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
   (
     set -x
     python3 "${ROOT_DIR}/benchmark_cld.py" \

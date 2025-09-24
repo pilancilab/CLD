@@ -160,7 +160,7 @@ def load_common_voice(lang, accent_config, common_voice_dir=None):
             accents = row.get('accents', '').split(',')
             if column_name not in accents and column_name != "":
                 continue
-            audio_path = os.path.join(common_voice_dir, lang, "clips", row['path'])
+            audio_path = os.path.join(common_voice_dir, accent_config.get("override_code") if accent_config.get("override_code") else lang, "clips", row['path'])
             if not os.path.exists(audio_path):
                 continue
             if COMMON_VOICE_USED[tsv_path][i]:

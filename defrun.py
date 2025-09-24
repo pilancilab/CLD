@@ -180,6 +180,7 @@ def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, 
         "global_best_delta_params": [global_best_delta_params]
     })
 
+    os.makedirs(output_dir, exist_ok=True)
     print("Saving CSV to:", os.path.join(output_dir, "global_metrics.csv"))
     metrics_df.to_csv(os.path.join(output_dir, "global_metrics.csv"), sep='\t', encoding='utf-8', index=False, header=True)
 

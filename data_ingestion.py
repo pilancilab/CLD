@@ -38,7 +38,7 @@ MAX_LABEL_LENGTH = 448 # whisper max tokens=448
 
 TARGET_SR = 16000
 
-COMMON_VOICE_USED = []
+COMMON_VOICE_USED = {}
 
 ### HELPER FUNCS
 
@@ -147,10 +147,10 @@ def load_common_voice(lang, accent_config, common_voice_dir=None):
         raise FileNotFoundError(f"validated.tsv not found at {tsv_path}")
 
     global COMMON_VOICE_USED
-    if len(COMMON_VOICE_USED) == 0:
-        # set to length of arr
-        COMMON_VOICE_USED = [False for _ in open(tsv_path)]
-        COMMON_VOICE_USED = COMMON_VOICE_USED[1:]
+    if tsv_path not in COMMON_VOICE_USED:
+        # Initialize usage tracking per TSV file (exclude header)
+        num_lines = sum(1 for _ in open(tsv_path, 'r', encoding='utf-8'))
+        COMMON_VOICE_USED[tsv_path] = [False] * max(0, num_lines - 1)
     
     column_name = accent_config.get("column_name")
     code = accent_config.get("code")
@@ -163,7 +163,7 @@ def load_common_voice(lang, accent_config, common_voice_dir=None):
             audio_path = os.path.join(common_voice_dir, lang, "clips", row['path'])
             if not os.path.exists(audio_path):
                 continue
-            if COMMON_VOICE_USED[i]:
+            if COMMON_VOICE_USED[tsv_path][i]:
                 continue
             try:
                 waveform, sr = torchaudio.load(audio_path)
@@ -172,7 +172,7 @@ def load_common_voice(lang, accent_config, common_voice_dir=None):
                     waveform = waveform.mean(dim=0, keepdim=True)
                 array = waveform.squeeze().numpy().astype(np.float32)
                 text = row['sentence']
-                COMMON_VOICE_USED[i] = True;
+                COMMON_VOICE_USED[tsv_path][i] = True
                 yield {
                     "audio": {
                         "array": array,

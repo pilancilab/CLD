@@ -62,75 +62,96 @@ PY
   NN_DIR="${RUN_DIR}/nn"
   CVX_DIR="${RUN_DIR}/cvx"
   LOG_FILE="${RUN_DIR}/run.log"
-  mkdir -p "${RUN_DIR}" "${DATA_DIR}" "${WHISPER_DIR}" "${NN_DIR}" "${CVX_DIR}"
+  mkdir -p "${RUN_DIR}"
 
   # We'll set WANDB_TAGS and WANDB_NAME per step for clearer run labeling
 
-  echo "[1/6] Ingesting data → ${DATA_DIR}"
-  (
-    set -x
-    python3 "${ROOT_DIR}/data_ingestion.py" \
-      --config "${CFG_PATH}" \
-      --out "${DATA_DIR}" \
-      --common-voice-dir "${CV_DIR}" \
-      --musan-dir "${MUSAN_DIR}" \
-      --augment
-  ) 2>&1 | tee -a "${LOG_FILE}"
-
-  echo "[2/6] Training Whisper → ${WHISPER_DIR}"
-  RUN_NAME="whisper-finetune-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
-  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},whisper-finetune,${LANG1}-${LANG2}"
-  export WANDB_NAME="${RUN_NAME}"
-  (
-    set -x
-    python3 "${ROOT_DIR}/whisper_training.py" \
-      --data_dir "${DATA_DIR}" \
-      --per_device_train_batch_size 16 \
-      --per_device_eval_batch_size 8 \
-      --gradient_accumulation_steps 2 \
-      --model_id "openai/whisper-small" \
-      --output_dir "${WHISPER_DIR}" \
-      --learning_rate 1e-5 \
-      --num_train_epochs 3 \
-      --wandb_project "${WANDB_PROJECT}" \
-      --wandb_entity "${WANDB_ENTITY}" \
-      --eval_strategy epoch \
-      --save_strategy epoch \
-      --fp16 \
-      --run_name "${RUN_NAME}"
-  ) 2>&1 | tee -a "${LOG_FILE}"
-
-  # Resolve latest checkpoint produced by the fine-tuning step for inference
-  WHISPER_CKPT_PATH="$(find "${WHISPER_DIR}" -maxdepth 1 -type d -name 'checkpoint-*' | grep -o '[0-9]\+$' | sort -nr | head -n 1 | xargs -I {} find "${WHISPER_DIR}" -maxdepth 1 -type d -name "checkpoint-{}" | head -n 1)"
-  if [[ -z "${WHISPER_CKPT_PATH}" ]]; then
-    echo "[WARN] No checkpoint-* directory found in ${WHISPER_DIR}; benchmarks may fail" | tee -a "${LOG_FILE}"
-    WHISPER_CKPT_PATH="${WHISPER_DIR}"
+  if [[ -d "${DATA_DIR}" ]]; then
+    echo "[SKIP 1/6] Data already exists at ${DATA_DIR}" | tee -a "${LOG_FILE}"
   else
-    echo "[INFO] Using Whisper checkpoint for inference: ${WHISPER_CKPT_PATH}" | tee -a "${LOG_FILE}"
+    echo "[1/6] Ingesting data → ${DATA_DIR}"
+    (
+      set -x
+      python3 "${ROOT_DIR}/data_ingestion.py" \
+        --config "${CFG_PATH}" \
+        --out "${DATA_DIR}" \
+        --common-voice-dir "${CV_DIR}" \
+        --musan-dir "${MUSAN_DIR}" \
+        --augment
+    ) 2>&1 | tee -a "${LOG_FILE}"
   fi
 
-  echo "[3/6] Training NN CLD head → ${NN_DIR}"
-  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},nn,${LANG1}-${LANG2}"
-  export WANDB_NAME="nn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
-  (
-    set -x
-    python3 "${ROOT_DIR}/train_nn_cld.py" \
-      --output_dir "${NN_DIR}" \
-      --data_dir "${DATA_DIR}" \
-      --lang1 "${LANG1}" \
-      --lang2 "${LANG2}"
-  ) 2>&1 | tee -a "${LOG_FILE}"
+  if [[ -d "${WHISPER_DIR}" ]]; then
+    echo "[SKIP 2/6] Whisper output already exists at ${WHISPER_DIR}" | tee -a "${LOG_FILE}"
+  else
+    echo "[2/6] Training Whisper → ${WHISPER_DIR}"
+    RUN_NAME="whisper-finetune-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
+    export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},whisper-finetune,${LANG1}-${LANG2}"
+    export WANDB_NAME="${RUN_NAME}"
+    (
+      set -x
+      python3 "${ROOT_DIR}/whisper_training.py" \
+        --data_dir "${DATA_DIR}" \
+        --per_device_train_batch_size 16 \
+        --per_device_eval_batch_size 8 \
+        --gradient_accumulation_steps 2 \
+        --model_id "openai/whisper-small" \
+        --output_dir "${WHISPER_DIR}" \
+        --learning_rate 1e-5 \
+        --num_train_epochs 3 \
+        --wandb_project "${WANDB_PROJECT}" \
+        --wandb_entity "${WANDB_ENTITY}" \
+        --eval_strategy epoch \
+        --save_strategy epoch \
+        --fp16 \
+        --run_name "${RUN_NAME}"
+    ) 2>&1 | tee -a "${LOG_FILE}"
+  fi
 
-  echo "[4/6] Training CVX model → ${CVX_DIR}"
-  export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},cvxnn,${LANG1}-${LANG2}"
-  export WANDB_NAME="cvxnn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
-  (
-    set -x
-    python3 "${ROOT_DIR}/cronos_trainer.py" \
-      --model_name whisper-small \
-      --data_dir "${DATA_DIR}" \
-      --output_dir "${CVX_DIR}"
-  ) 2>&1 | tee -a "${LOG_FILE}"
+  # Resolve latest checkpoint produced by the fine-tuning step for inference (if dir exists)
+  WHISPER_CKPT_PATH=""
+  if [[ -d "${WHISPER_DIR}" ]]; then
+    WHISPER_CKPT_PATH="$(find "${WHISPER_DIR}" -maxdepth 1 -type d -name 'checkpoint-*' | grep -o '[0-9]\+$' | sort -nr | head -n 1 | xargs -I {} find "${WHISPER_DIR}" -maxdepth 1 -type d -name "checkpoint-{}" | head -n 1)"
+    if [[ -z "${WHISPER_CKPT_PATH}" ]]; then
+      echo "[WARN] No checkpoint-* directory found in ${WHISPER_DIR}; benchmarks may fail" | tee -a "${LOG_FILE}"
+      WHISPER_CKPT_PATH="${WHISPER_DIR}"
+    else
+      echo "[INFO] Using Whisper checkpoint for inference: ${WHISPER_CKPT_PATH}" | tee -a "${LOG_FILE}"
+    fi
+  else
+    echo "[WARN] Whisper dir ${WHISPER_DIR} does not exist; will skip whisper-dependent benchmarks" | tee -a "${LOG_FILE}"
+  fi
+
+  if [[ -d "${NN_DIR}" ]]; then
+    echo "[SKIP 3/6] NN output already exists at ${NN_DIR}" | tee -a "${LOG_FILE}"
+  else
+    echo "[3/6] Training NN CLD head → ${NN_DIR}"
+    export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},nn,${LANG1}-${LANG2}"
+    export WANDB_NAME="nn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
+    (
+      set -x
+      python3 "${ROOT_DIR}/train_nn_cld.py" \
+        --output_dir "${NN_DIR}" \
+        --data_dir "${DATA_DIR}" \
+        --lang1 "${LANG1}" \
+        --lang2 "${LANG2}"
+    ) 2>&1 | tee -a "${LOG_FILE}"
+  fi
+
+  if [[ -d "${CVX_DIR}" ]]; then
+    echo "[SKIP 4/6] CVX output already exists at ${CVX_DIR}" | tee -a "${LOG_FILE}"
+  else
+    echo "[4/6] Training CVX model → ${CVX_DIR}"
+    export WANDB_TAGS="${BASE_WANDB_TAGS},${CFG_NAME},cvxnn,${LANG1}-${LANG2}"
+    export WANDB_NAME="cvxnn-${LANG1}-${LANG2}-${CFG_NAME}-$(date +%Y%m%d-%H%M%S)"
+    (
+      set -x
+      python3 "${ROOT_DIR}/cronos_trainer.py" \
+        --model_name whisper-small \
+        --data_dir "${DATA_DIR}" \
+        --output_dir "${CVX_DIR}"
+    ) 2>&1 | tee -a "${LOG_FILE}"
+  fi
 
   echo "[5/6] Benchmarking (nn, cvx, vanilla)"
 

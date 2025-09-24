@@ -6,6 +6,7 @@ from transformers import WhisperForConditionalGeneration, WhisperProcessor
 dtype = torch.float16
 
 lang_tokens_glob = []
+time_taken_glob = []
 
 def load_whisper(whisper_path):
     whisper = WhisperForConditionalGeneration.from_pretrained(whisper_path, device_map="auto", dtype=dtype)
@@ -50,11 +51,18 @@ def custom_retrieve_init_tokens_creator(processor, lang1, lang2, cld_type):
             return [0 if x > 0 else 1 for x in logits]
 
     def _custom_retrieve_init_tokens(self, input_features, batch_size, generation_config=None, **kwargs):
-        global lang_tokens_glob
+        global lang_tokens_glob, time_taken_glob
         encoder_outputs = self.model.encoder(input_features, return_dict=True)
         hidden = encoder_outputs.last_hidden_state
-        class_ids = head_caller(self, hidden)
-        
+        class_ids = []
+        # Measure per-sample language detection time
+        for i in range(hidden.shape[0]):
+            start_time = time.perf_counter()
+            ids = head_caller(self, hidden[i:i+1])
+            end_time = time.perf_counter()
+            time_taken_glob.append(end_time - start_time)
+            class_ids.append(ids[0])
+
         # Assuming 0 = lang1, 1 = lang2
         lang_tokens = [lang_to_id(self, lang1) if class_id == 0 else lang_to_id(self, lang2) for class_id in class_ids]
         lang_tokens_glob.extend([lang1 if class_id == 0 else lang2 for class_id in class_ids])
@@ -125,8 +133,9 @@ def get_nn_pipeline(whisper_path, cld_path, cld_type, lang1, lang2):
     return whisper, processor
 
 def inference(model, processor, audio):
-    global lang_tokens_glob
+    global lang_tokens_glob, time_taken_glob
     lang_tokens_glob = []
+    time_taken_glob = []
     input_features = processor(audio, sampling_rate=16000, return_tensors="pt").input_features
     
     # Place on model's entry device
@@ -134,8 +143,15 @@ def inference(model, processor, audio):
     input_features = input_features.to(first_device, dtype=dtype)
     
     predicted_ids = model.generate(input_features)
-    # language_tokens = [processor.decode([pred[1]], skip_special_tokens=False)[2:-2] for pred in predicted_ids]
+    # For vanilla, measure per-sample detection separately to collect timings per item
     if model.cld_type == "vanilla":
-        lang_tokens_glob = detect_language_vanilla(model, input_features)
+        lang_tokens = []
+        for i in range(input_features.shape[0]):
+            start_time = time.perf_counter()
+            langs = detect_language_vanilla(model, input_features[i:i+1])
+            end_time = time.perf_counter()
+            time_taken_glob.append(end_time - start_time)
+            lang_tokens.append(langs[0])
+        lang_tokens_glob = lang_tokens
     transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-    return lang_tokens_glob, transcription
+    return lang_tokens_glob, transcription, time_taken_glob

@@ -42,14 +42,20 @@ def main():
 
     pred_language_ids = []
     pred_texts = []
+    time_takens = []
+    audio_durations = []
     
     batch_temp = []
     for i, sample in enumerate(test_ds):
-        batch_temp.append(sample["audio"]["array"])
+        audio_arr = sample["audio"]["array"]
+        sr = sample["audio"].get("sampling_rate", 16000)
+        audio_durations.append(len(audio_arr) / float(sr) * 1000.0)
+        batch_temp.append(audio_arr)
         if len(batch_temp) == args.batch_size or i == len(test_ds) - 1:
-            language_ids_batch, texts_batch = inference(model, processor, batch_temp)
+            language_ids_batch, texts_batch, time_taken_batch = inference(model, processor, batch_temp)
             pred_language_ids.extend(language_ids_batch)
             pred_texts.extend(texts_batch)
+            time_takens.extend(time_taken_batch)
             batch_temp = []
 
     wer = 100.0 * wer_metric.compute(predictions=pred_texts, references=true_texts)
@@ -103,16 +109,16 @@ def main():
     artifact.add(table, "classification_report_table")
     wandb.log_artifact(artifact)
 
-    # Per-sample predictions artifact: true language, predicted language, accent code
-    per_sample_columns = ["true_lang", "pred_lang", "accent"]
+    # Per-sample predictions artifact: true language, predicted language, accent, durations and timing
+    per_sample_columns = ["true_lang", "pred_lang", "accent", "audio_duration_ms", "cld_time_ms"]
     if 'accent' in test_ds.features:
         accents = [x.get("accent", None) for x in test_ds]
     else:
         accents = [None] * len(test_ds)
 
     per_sample_data = [
-        [t_lang, p_lang, acc]
-        for t_lang, p_lang, acc in zip(true_language_ids, pred_language_ids, accents)
+        [t_lang, p_lang, acc, dur_s, t_s]
+        for t_lang, p_lang, acc, dur_s, t_s in zip(true_language_ids, pred_language_ids, accents, audio_durations, time_takens)
     ]
     per_sample_table = wandb.Table(data=per_sample_data, columns=per_sample_columns)
     preds_artifact = wandb.Artifact("per_sample_predictions", type="predictions")

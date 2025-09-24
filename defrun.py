@@ -101,76 +101,76 @@ def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, 
 
     ##### AdamW #####
     # Compare with AdamW optimizer
-    seed_offset = 10
-    seeds = [opt_seed, opt_seed + seed_offset, opt_seed + 1 + seed_offset]
-    problem_data = dict(training_X=Atr, training_y=ytr, test_X=Atst, test_y=ytst)
+    # seed_offset = 10
+    # seeds = [opt_seed, opt_seed + seed_offset, opt_seed + 1 + seed_offset]
+    # problem_data = dict(training_X=Atr, training_y=ytr, test_X=Atst, test_y=ytst)
 
-    # Start timing AdamW training (all 3 seeds)
-    adamw_start_time = time.time()
-    adamw_individual_times = []
+    # # Start timing AdamW training (all 3 seeds)
+    # adamw_start_time = time.time()
+    # adamw_individual_times = []
 
-    for i, seed in enumerate(seeds):
-        filename = f"{model_name}_rho_{cronos_params['rho']}_admm_{cronos_params['admm_iters']}_pcg_{cronos_params['pcg_iters']}_seed_{seed}.pkl"
-        optimizer_metrics = {'CRONOS': metrics}
+    # for i, seed in enumerate(seeds):
+    #     filename = f"{model_name}_rho_{cronos_params['rho']}_admm_{cronos_params['admm_iters']}_pcg_{cronos_params['pcg_iters']}_seed_{seed}.pkl"
+    #     optimizer_metrics = {'CRONOS': metrics}
 
-        # Parameters for random search
-        l, u = -6, -2.5
-        grid_size = 8
-        tuning_seed = 0
+    #     # Parameters for random search
+    #     l, u = -6, -2.5
+    #     grid_size = 8
+    #     tuning_seed = 0
 
-        model_params = dict(type='two_layer_mlp')
-        task = 'classification'
-        adamW_params['seed'] = jax.random.PRNGKey(seed)
+    #     model_params = dict(type='two_layer_mlp')
+    #     task = 'classification'
+    #     adamW_params['seed'] = jax.random.PRNGKey(seed)
 
-        # Time individual AdamW run
-        adamw_seed_start = time.time()
+    #     # Time individual AdamW run
+    #     adamw_seed_start = time.time()
         
-        # Run AdamW optimization
-        optimizer_metrics['AdamW'] = lr_random_search(problem_data, model_params, adamW_params, task, l, u, grid_size, tuning_seed)
+    #     # Run AdamW optimization
+    #     optimizer_metrics['AdamW'] = lr_random_search(problem_data, model_params, adamW_params, task, l, u, grid_size, tuning_seed)
         
-        adamw_seed_end = time.time()
-        adamw_seed_time = adamw_seed_end - adamw_seed_start
-        adamw_individual_times.append(adamw_seed_time)
+    #     adamw_seed_end = time.time()
+    #     adamw_seed_time = adamw_seed_end - adamw_seed_start
+    #     adamw_individual_times.append(adamw_seed_time)
 
-        print(np.max(optimizer_metrics['AdamW']['test_acc']))
-        print(f"Finished running AdamW for seed_{seed}! Time: {adamw_seed_time:.2f} seconds")
+    #     print(np.max(optimizer_metrics['AdamW']['test_acc']))
+    #     print(f"Finished running AdamW for seed_{seed}! Time: {adamw_seed_time:.2f} seconds")
 
-        # Calculate improvement of CRONOS over AdamW
-        delta_test_peak = test_peak - np.max(optimizer_metrics['AdamW']['test_acc'])
-        if delta_test_peak > global_delta_test_peak:
-            global_delta_test_peak = delta_test_peak
-            print(f"New global delta peak for CXV-AdamW delta: {global_delta_test_peak}")
-            global_best_delta_params = {
-                "model_name": model_name,
-                "cronos_params": cronos_params,
-                "adamW_params": adamW_params,
-                "test_peak": test_peak,
-                "train_peak": train_peak
-            }
+    #     # Calculate improvement of CRONOS over AdamW
+    #     delta_test_peak = test_peak - np.max(optimizer_metrics['AdamW']['test_acc'])
+    #     if delta_test_peak > global_delta_test_peak:
+    #         global_delta_test_peak = delta_test_peak
+    #         print(f"New global delta peak for CXV-AdamW delta: {global_delta_test_peak}")
+    #         global_best_delta_params = {
+    #             "model_name": model_name,
+    #             "cronos_params": cronos_params,
+    #             "adamW_params": adamW_params,
+    #             "test_peak": test_peak,
+    #             "train_peak": train_peak
+    #         }
 
-        # Create the subfolder path
-        model_dir = os.path.join(output_dir, model_name)
-        os.makedirs(model_dir, exist_ok=True)
+    #     # Create the subfolder path
+    #     model_dir = os.path.join(output_dir, model_name)
+    #     os.makedirs(model_dir, exist_ok=True)
 
-        # Save optimizer metrics
-        pickle_file_path = os.path.join(model_dir, filename)
-        with open(pickle_file_path, 'wb') as handle:
-            pickle.dump(optimizer_metrics, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    #     # Save optimizer metrics
+    #     pickle_file_path = os.path.join(model_dir, filename)
+    #     with open(pickle_file_path, 'wb') as handle:
+    #         pickle.dump(optimizer_metrics, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # End timing AdamW training (all 3 seeds)
-    adamw_end_time = time.time()
-    adamw_total_time = adamw_end_time - adamw_start_time
-    adamw_avg_time = np.mean(adamw_individual_times)
+    # # End timing AdamW training (all 3 seeds)
+    # adamw_end_time = time.time()
+    # adamw_total_time = adamw_end_time - adamw_start_time
+    # adamw_avg_time = np.mean(adamw_individual_times)
 
     # Print timing comparison
-    print("\n" + "="*50)
-    print("TRAINING TIME COMPARISON:")
+    # print("\n" + "="*50)
+    # print("TRAINING TIME COMPARISON:")
     print(f"CRONOS training time: {cronos_training_time:.2f} seconds")
-    print(f"AdamW total time (3 seeds): {adamw_total_time:.2f} seconds")
-    print(f"AdamW average per seed: {adamw_avg_time:.2f} seconds")
-    print(f"AdamW individual times: {[f'{t:.2f}s' for t in adamw_individual_times]}")
-    print(f"CRONOS vs AdamW (single seed): {cronos_training_time/adamw_avg_time:.2f}x ratio")
-    print("="*50 + "\n")
+    # print(f"AdamW total time (3 seeds): {adamw_total_time:.2f} seconds")
+    # print(f"AdamW average per seed: {adamw_avg_time:.2f} seconds")
+    # print(f"AdamW individual times: {[f'{t:.2f}s' for t in adamw_individual_times]}")
+    # print(f"CRONOS vs AdamW (single seed): {cronos_training_time/adamw_avg_time:.2f}x ratio")
+    # print("="*50 + "\n")
 
     # Save global metrics CSV
     metrics_df = pd.DataFrame({

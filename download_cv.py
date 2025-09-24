@@ -57,11 +57,13 @@ def process_dataset(api_key, dataset_id, language_id, base_output_dir):
         top_level_dir = os.path.join(temp_dir, extracted_items[0])
 
         # Assume single inner directory
-        inner_items = os.listdir(top_level_dir)
-        if len(inner_items) != 1 or not os.path.isdir(os.path.join(top_level_dir, inner_items[0])):
-            raise ValueError("Unexpected inner structure: expected single inner directory")
+        inner_dirs = [item for item in os.listdir(top_level_dir) if os.path.isdir(os.path.join(top_level_dir, item))]
+        if len(inner_dirs) != 1:
+            raise ValueError("Unexpected inner structure: expected exactly one inner directory")
 
-        source_dir = os.path.join(top_level_dir, inner_items[0])
+
+
+        source_dir = os.path.join(top_level_dir, inner_dirs[0])
 
         # Do not create output_dir here to allow direct move/rename
         # Assume base_output_dir exists; move will create the language_id dir

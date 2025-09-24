@@ -209,27 +209,12 @@ def main():
     # --- Map functions
     prepare_dataset = prepare_dataset_function(processor)
 
-    # Apply per-sample processing (single-thread first; you can set num_proc if your env supports it)
-    train_ds = train_ds.map(prepare_dataset)
-    val_ds = val_ds.map(prepare_dataset)
-    test_ds = test_ds.map(prepare_dataset)
-
-    # --- Preview: print 10 rows with decoded labels
-    # try:
-    #     preview_n = min(10, len(train_ds))
-    #     preview_ds = train_ds.select(range(preview_n))
-    #     print("\nPreviewing first", preview_n, "training rows (decoded labels):")
-    #     for i in range(preview_n):
-    #         ex = preview_ds[i]
-    #         lang = ex.get("lang", None)
-    #         sentence = ex.get("sentence", None)
-    #         labels = ex.get("labels", [])
-    #         # Use language-specific tokenizer for decoding if available
-    #         decoded = processor.tokenizer.decode(labels, skip_special_tokens=False)
-    #         print(f"[{i}] lang={lang} | target(sentence)={sentence}")
-    #         print(f"    decoded(labels)={decoded}")
-    # except Exception as e:
-    #     print("Warning: failed to preview training rows:", repr(e))
+    # Apply per-sample processing (parallelize with num_proc for speed)
+    import multiprocessing
+    num_proc = multiprocessing.cpu_count() // 2  # Use half CPUs to avoid overload
+    train_ds = train_ds.map(prepare_dataset, num_proc=num_proc)
+    val_ds = val_ds.map(prepare_dataset, num_proc=num_proc)
+    test_ds = test_ds.map(prepare_dataset, num_proc=num_proc)
 
     # --- Data collator
     data_collator = DataCollatorSpeechSeq2SeqWithPadding(

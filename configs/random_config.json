@@ -59,9 +59,9 @@
     "params": {
         "samples_per_class": 1000,
         "split": {
-            "train": 0.0,
-            "val": 0.0,
-            "test": 1.0
+            "train": 0.1,
+            "val": 0.1,
+            "test": 0.8
         }
     }
 }

@@ -142,7 +142,7 @@ def is_audio_in_length_range(audio):
 def load_common_voice(lang, accent_config, common_voice_dir=None):
     if common_voice_dir is None:
         raise ValueError("common_voice_dir is required for local Common Voice loading")
-    tsv_path = os.path.join(common_voice_dir, lang, "validated.tsv")
+    tsv_path = os.path.join(common_voice_dir, accent_config.get("override_code") if accent_config.get("override_code") else lang, "validated.tsv")
     if not os.path.exists(tsv_path):
         raise FileNotFoundError(f"validated.tsv not found at {tsv_path}")
 

@@ -10,37 +10,16 @@
                 }
             ]
         },
-        "msi": {
-            "accents": [
-                {
-                    "code": "msi",
-                    "column_name": "",
-                    "dataset": "common_voice"
-                }
-            ]
-        },
         "ms": {
             "accents": [
                 {
+                    "code": "msi",
+                    "override_code": "msi",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
                     "code": "ms",
-                    "column_name": "",
-                    "dataset": "common_voice"
-                }
-            ]
-        },
-        "zh-tw": {
-            "accents": [
-                {
-                    "code": "zh-tw",
-                    "column_name": "",
-                    "dataset": "common_voice"
-                }
-            ]
-        },
-        "zh-hk": {
-            "accents": [
-                {
-                    "code": "zh-hk",
                     "column_name": "",
                     "dataset": "common_voice"
                 }
@@ -49,7 +28,19 @@
         "zh": {
             "accents": [
                 {
-                    "code": "zh",
+                    "code": "tw",
+                    "override_code": "zh-tw",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "hk",
+                    "override_code": "zh-hk",
+                    "column_name": "",
+                    "dataset": "common_voice"
+                },
+                {
+                    "code": "zh",   
                     "column_name": "",
                     "dataset": "common_voice"
                 }

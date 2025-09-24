@@ -190,7 +190,7 @@ def load_lahaja(lang, accent_config, common_voice_dir=None):
     ds = load_dataset("ai4bharat/Lahaja", split="test")
 
     for ex in ds:
-        audio_data = ex.get("audio", None)  # Changed from "audio_filepath" to "audio"
+        audio_data = ex.get("audio_filepath", None)  # Changed from "audio_filepath" to "audio"
         if audio_data is not None and isinstance(audio_data, dict):
             array = audio_data.get("array")
             sr = audio_data.get("sampling_rate")

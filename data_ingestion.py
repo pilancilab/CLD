@@ -158,7 +158,7 @@ def load_common_voice(lang, accent_config, common_voice_dir=None):
         reader = csv.DictReader(f, delimiter='\t')
         for i, row in enumerate(reader):
             accents = row.get('accents', '').split(',')
-            if column_name not in accents:
+            if column_name not in accents and column_name != "":
                 continue
             audio_path = os.path.join(common_voice_dir, lang, "clips", row['path'])
             if not os.path.exists(audio_path):

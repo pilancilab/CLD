@@ -1,19 +1,15 @@
-# CLARA
-CONVEX LOW-RESOURCE ACCENT-ROBUST LANGUAGE DETECTION IN ASR
+# CLARA: Convex Low-Resource Accent-Robust Language Detection in ASR
 
 ## Overview
-CLARA is a practical pipeline for training accent-robust, multilingual ASR with lightweight language detection. It combines standard Whisper fine-tuning with a tiny convex binary language head (cvxNN) solved efficiently in JAX and trained using ADMM optimization.
+CLARA is an efficient pipeline for accent-robust, multilingual ASR with lightweight language detection. It integrates Whisper fine-tuning with a convex binary language head (cvxNN), implemented in JAX and optimized via ADMM for high performance in low-resource settings.
 
 ![Fig 1&2](assets/fig_1_2.png)
 ![Table 2](assets/table_2.png)
 
 ## Highlights
-Why CLARA is amazing:
-
-1) High classification accuracy in both binary and multiclass (see Table 2)
-2) Resilient to low-resource/low sample complexity (see Fig. 1 and Fig. 2)
-3) Speed, low compute time and TFLOPS due to ADMM and written in JAX
-
+1) High Accuracy: Excels in binary and multiclass language detection (Table 2).
+2) Low-Resource Robustness: Effective with limited data (Figures 1 & 2).
+3) Efficient: 13x training speedup from traditional NNs due to ADMM optimization and JAX.
 
 ---
 

@@ -269,8 +269,8 @@ def main():
 
         def forward(self, hidden, labels=None):
             # Pass through frozen encoder
-            pooled = hidden.mean(dim=1)  # (B, D)
-            logits = self.classifier(pooled)  # (B, 2)
+            # pooled = hidden.mean(dim=1)  # (B, D)
+            logits = self.classifier(hidden)  # (B, 2)
             loss = None
             if labels is not None:
                 loss = nn.CrossEntropyLoss()(logits, labels)

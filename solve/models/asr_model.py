@@ -94,7 +94,7 @@ class Whisper(ASRModel):
         self.head = None # default head
 
 
-    def load_data(self, dataset_path: str, target_lang: str = 'en', caller_script: str = None, data_seed: int = 42, dataset_split: str = "train", shuffle=True, negative_label=-1.0) -> Tuple[np.array, np.array]:
+    def load_data(self, dataset_path: str, target_lang: str = 'en', caller_script: str = None, data_seed: int = 42, dataset_split: str = "train", shuffle=True, positive_label=1.0, negative_label=-1.0) -> Tuple[np.array, np.array]:
         """
         Load HF dataset, extract pooled model hidden states, return train/test splits.
         
@@ -163,7 +163,7 @@ class Whisper(ASRModel):
             if hidden is None:
                 continue  # Skip invalid audio
             
-            label = 1.0 if sample['lang'] == target_lang else negative_label
+            label = positive_label if sample['lang'] == target_lang else negative_label
             features.append(hidden)
             labels.append(label)
             valid_count += 1
@@ -187,9 +187,7 @@ class Whisper(ASRModel):
 
     def set_lang_detect_head(self, lang_detect_head):
         self.head = lang_detect_head
-        print("sdlfks")
         if self.head:
-            print(self.head)
             self.model._retrieve_init_tokens = types.MethodType(whisper_custom_retrieve_init_tokens_creator(self, self.config.get("lang1"), self.config.get("lang2")), self.model)
         
     def _detect_language_vanilla(self, input_features):

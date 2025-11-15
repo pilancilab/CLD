@@ -148,21 +148,21 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     asr_model = ASRModel.from_pretrained(args.model)
-    trainX, trainY = asr_model.load_data(args.data_dir, args.lang1, negative_label=0, dataset_split="train")
-    validX, validY = asr_model.load_data(args.data_dir, args.lang1, negative_label=0, dataset_split="valid")
-    testX, testY = asr_model.load_data(args.data_dir, args.lang1, negative_label=0, dataset_split="test")
+    trainX, trainY = asr_model.load_data(args.data_dir, args.lang1, positive_label=1, negative_label=0, dataset_split="train")
+    validX, validY = asr_model.load_data(args.data_dir, args.lang1, positive_label=1, negative_label=0, dataset_split="valid")
+    testX, testY = asr_model.load_data(args.data_dir, args.lang1, positive_label=1, negative_label=0, dataset_split="test")
 
     train_dataset = Dataset.from_dict({
         "hidden": trainX,
-        "label": trainY
+        "labels": trainY
     })
     valid_dataset = Dataset.from_dict({
         "hidden": validX,
-        "label": validY
+        "labels": validY
     })
     test_dataset = Dataset.from_dict({
         "hidden": testX,
-        "label": testY
+        "labels": testY
     })
 
     # TARGET_SR = 16000

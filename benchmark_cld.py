@@ -11,8 +11,8 @@ import wandb
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate Whisper model on a dataset for language detection and transcription.")
     parser.add_argument("--dataset_path", type=str, required=True, help="Path to the dataset directory (e.g., 'data/en_hi/').")
-    parser.add_argument("--model_name", type=str, default="models/whisper-small-enhi-out", help="Path to the Whisper model directory.")
-    parser.add_argument("--model_path", type=str, default="models/whisper-small-enhi-out", help="Path to the Whisper model directory.")
+    parser.add_argument("--model_name", type=str, default="models/whisper-small-enhi-out", help="Name of huggingface model.")
+    parser.add_argument("--model_path", type=str, default="models/whisper-small-enhi-out", help="Path to the model directory.")
     parser.add_argument("--cld_path", type=str, default="models/en_hi_nn", help="Path to the language classifier model directory.")
     parser.add_argument("--cld_type", type=str, default="nn", choices=["nn", "cvx", "vanilla"], help="Detection head architecture.")
     parser.add_argument("--lang1", type=str, default="en", help="First language code (e.g., 'en' for English).")
@@ -31,10 +31,11 @@ def main():
     ds = load_from_disk(args.dataset_path)
 
     asr_model = ASRModel.from_pretrained(args.model_name, config={"lang1": args.lang1, "lang2": args.lang2})
+    lang_detect_head = None
     if args.cld_type == 'nn':
-        lang_detect_head = NNLangDetectHead.load(args.cld_path)
-    elif args.cld_type == 'cld':
-        lang_detect_head = CVXNNLangDetectHead.load(args.cld_path)
+        lang_detect_head = NNLangDetectHead.load(args.cld_path, asr_model)
+    elif args.cld_type == 'cvx':
+        lang_detect_head = CVXNNLangDetectHead.load(args.cld_path, asr_model)
     asr_model.set_lang_detect_head(lang_detect_head)
 
     # Use test split consistently

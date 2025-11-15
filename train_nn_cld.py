@@ -153,15 +153,15 @@ def main():
     testX, testY = asr_model.load_data(args.data_dir, args.lang1, negative_label=0, dataset_split="test")
 
     train_dataset = Dataset.from_dict({
-        "input_features": trainX,
+        "hidden": trainX,
         "label": trainY
     })
     valid_dataset = Dataset.from_dict({
-        "input_features": validX,
+        "hidden": validX,
         "label": validY
     })
     test_dataset = Dataset.from_dict({
-        "input_features": testX,
+        "hidden": testX,
         "label": testY
     })
 
@@ -227,7 +227,7 @@ def main():
 
     # print(f"Combined bilingual dataset: train (shuffled)={len(raw_datasets['train'])}, eval={len(raw_datasets['evaluation'])}")
 
-    # # 5) Preprocess: convert each audio→mel features, store in "input_features"
+    # # 5) Preprocess: convert each audio→mel features, store in "hidden"
     # def preprocess(batch):
     #     audio_array = batch["audio"]["array"]
     #     if isinstance(audio_array, list):
@@ -236,8 +236,8 @@ def main():
     #         audio_array,
     #         sampling_rate=TARGET_SR,
     #         return_tensors="pt"
-    #     ).input_features[0]
-    #     batch["input_features"] = feats
+    #     ).hidden[0]
+    #     batch["hidden"] = feats
     #     return batch
 
     # print("Preprocessing audio features...")

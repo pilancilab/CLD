@@ -1,6 +1,8 @@
 import argparse
 from datasets import load_from_disk
 from solve.models.load_whisper_pipeline import get_nn_pipeline, inference, detect_language_vanilla
+from solve.models.asr_model import ASRModel
+from solve.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead
 from sklearn.metrics import classification_report
 from transformers import WhisperProcessor
 import evaluate
@@ -9,7 +11,8 @@ import wandb
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate Whisper model on a dataset for language detection and transcription.")
     parser.add_argument("--dataset_path", type=str, required=True, help="Path to the dataset directory (e.g., 'data/en_hi/').")
-    parser.add_argument("--whisper_path", type=str, default="models/whisper-small-enhi-out", help="Path to the Whisper model directory.")
+    parser.add_argument("--model_name", type=str, default="models/whisper-small-enhi-out", help="Path to the Whisper model directory.")
+    parser.add_argument("--model_path", type=str, default="models/whisper-small-enhi-out", help="Path to the Whisper model directory.")
     parser.add_argument("--cld_path", type=str, default="models/en_hi_nn", help="Path to the language classifier model directory.")
     parser.add_argument("--cld_type", type=str, default="nn", choices=["nn", "cvx", "vanilla"], help="Detection head architecture.")
     parser.add_argument("--lang1", type=str, default="en", help="First language code (e.g., 'en' for English).")
@@ -27,13 +30,12 @@ def main():
 
     ds = load_from_disk(args.dataset_path)
 
-    model, processor = get_nn_pipeline(
-        whisper_path=args.whisper_path,
-        cld_path=args.cld_path,
-        cld_type=args.cld_type,
-        lang1=args.lang1,
-        lang2=args.lang2
-    )
+    asr_model = ASRModel.from_pretrained(args.model_name, config={"lang1": args.lang1, "lang2": args.lang2})
+    if args.cld_type == 'nn':
+        lang_detect_head = NNLangDetectHead.load(args.cld_path)
+    elif args.cld_type == 'cld':
+        lang_detect_head = CVXNNLangDetectHead.load(args.cld_path)
+    asr_model.set_lang_detect_head(lang_detect_head)
 
     # Use test split consistently
     test_ds = ds["test"]
@@ -47,7 +49,7 @@ def main():
     for i, sample in enumerate(test_ds):
         batch_temp.append(sample["audio"]["array"])
         if len(batch_temp) == args.batch_size or i == len(test_ds) - 1:
-            language_ids_batch, texts_batch = inference(model, processor, batch_temp)
+            language_ids_batch, texts_batch = asr_model.predict(batch_temp)
             pred_language_ids.extend(language_ids_batch)
             pred_texts.extend(texts_batch)
             batch_temp = []

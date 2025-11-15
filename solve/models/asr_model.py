@@ -22,9 +22,9 @@ class ASRModel(ABC):
         self.config = config
     
     @classmethod
-    def from_pretrained(self, model_name):
+    def from_pretrained(self, model_name, config={}):
         if model_name.startswith("openai/whisper"):
-            return Whisper(model_name)
+            return Whisper(model_name, config)
         elif model_name.startswith("nvidia/"):
             pass
         elif model_name.startswith("omniASR"):
@@ -93,7 +93,7 @@ class Whisper(ASRModel):
         self.head = None # default head
 
 
-    def load_data(self, dataset_path: str, target_lang: str = 'en', caller_script: str = None, data_seed: int = 42, dataset_split: str = "train", shuffle=True) -> Tuple[np.array, np.array]:
+    def load_data(self, dataset_path: str, target_lang: str = 'en', caller_script: str = None, data_seed: int = 42, dataset_split: str = "train", shuffle=True, negative_label=-1.0) -> Tuple[np.array, np.array]:
         """
         Load HF dataset, extract pooled model hidden states, return train/test splits.
         
@@ -162,7 +162,7 @@ class Whisper(ASRModel):
             if hidden is None:
                 continue  # Skip invalid audio
             
-            label = 1.0 if sample['lang'] == target_lang else -1.0
+            label = 1.0 if sample['lang'] == target_lang else negative_label
             features.append(hidden)
             labels.append(label)
             valid_count += 1
@@ -170,7 +170,7 @@ class Whisper(ASRModel):
         if valid_count == 0:
             raise ValueError("No valid audio samples found")
         
-        print(f"Extracted {valid_count} valid samples: {np.sum(np.array(labels) == 1)} POS, {np.sum(np.array(labels) == -1)} NEG")
+        print(f"Extracted {valid_count} valid samples: {np.sum(np.array(labels) == 1)} POS, {np.sum(np.array(labels) == negative_label)} NEG")
         
         # Convert to arrays
         A = np.array(features)

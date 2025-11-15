@@ -8,10 +8,10 @@ uses 10 neurons
 import jax
 import numpy as np
 import jax.numpy as jnp
-from solve.utils.whisper_dataloader import load_data
 from solve.models.cvx_relu_mlp import CVX_ReLU_MLP
 from solve.optimizers.admm import admm
 from solve.experiments.lr_experiment import lr_random_search
+from solve.models.asr_model import ASRModel
 
 import os
 import pickle
@@ -50,8 +50,9 @@ def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, 
     global_best_delta_params = {}
 
     # Load the training and test data
-    Atr, ytr = load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun", dataset_split="train")
-    Atst, ytst = load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun", dataset_split="valid")
+    asr_model = ASRModel.from_pretrained(model_name)
+    Atr, ytr = asr_model.load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun", dataset_split="train")
+    Atst, ytst = asr_model.load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun", dataset_split="valid")
     # Atr, ytr, Atst, ytst, ntr, ntst = load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun")
 
     ##### CRONOS #####
@@ -185,7 +186,7 @@ def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, 
     metrics_df.to_csv(os.path.join(output_dir, "global_metrics.csv"), sep='\t', encoding='utf-8', index=False, header=True)
 
     # Save the trained convex model
-    trained_model_path = os.path.join(output_dir, f"{model_name}_trained_cvx_mlp.pkl")
+    trained_model_path = os.path.join(output_dir, f"{model_name.replace('/','_')}_trained_cvx_mlp.pkl")
     with open(trained_model_path, 'wb') as f:
         pickle.dump(model, f)
 

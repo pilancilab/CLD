@@ -60,7 +60,7 @@ data_seed = random.randint(1, 10)
 # Initialize wandb with all configuration at once
 wandb.init(
     project="CLD",
-    name=f"cronos_{model_names}",
+    name=f"cronos_{model_names.replace("/","_")}",
     config={
         "model_name": model_names,
         "cronos_params": cronos_params,

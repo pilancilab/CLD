@@ -87,7 +87,8 @@ def whisper_custom_retrieve_init_tokens_creator(asr_model, lang1, lang2):
 class Whisper(ASRModel):
     def __init__(self, model_name, config={}):
         super().__init__(model_name, config)
-        self.model = WhisperForConditionalGeneration.from_pretrained(model_name, device_map="auto", dtype=dtype)
+        self.model = WhisperForConditionalGeneration.from_pretrained(model_name, device_map="auto")
+        self.model.to(dtype=dtype)
         self.model.config.forced_decoder_ids = None
         self.processor = WhisperProcessor.from_pretrained(model_name)
         self.head = None # default head

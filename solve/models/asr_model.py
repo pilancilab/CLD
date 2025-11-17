@@ -1,7 +1,7 @@
 import os, time, torch, types, pickle
 import torch.nn as nn
 from safetensors.torch import load_file
-from transformers import WhisperForConditionalGeneration, WhisperProcessor
+from transformers import WhisperForConditionalGeneration, WhisperProcessor, Wav2Vec2ForCTC, AutoProcessor, AutoModelForAudioClassification
 
 import jax.numpy as jnp
 import numpy as np
@@ -10,10 +10,17 @@ import torch
 import torchaudio
 from typing import Tuple
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 dtype = torch.float16
 
-
+ISO2_TO_ISO3 = {
+    "en": "eng",
+    "zh": "zho",
+    "hi": "hin",
+    "id": "ind",
+    "ms": "msa"
+}
 
 class ASRModel(ABC):
     def __init__(self, model_name, config):
@@ -234,3 +241,97 @@ class Whisper(ASRModel):
         id_to_lang_mapping =  dict(zip(self.model.generation_config.lang_to_id.values(), self.model.generation_config.lang_to_id.keys()))
         return id_to_lang_mapping.get(tid, "    ")[2:-2]
 
+class MMS(ASRModel):
+    def __init__(self, model_name: str, config: dict = {}):
+        super().__init__(model_name, config)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.processor = AutoProcessor.from_pretrained(model_name)
+        self.model = Wav2Vec2ForCTC.from_pretrained(model_name, torch_dtype=dtype).to(self.device)
+        self.lid_model = AutoModelForAudioClassification.from_pretrained("facebook/mms-lid-4017", torch_dtype=dtype).to(self.device)
+        self.head = None
+        self.lang1_iso = None
+        self.lang2_iso = None
+        self.current_adapter = None
+
+        self.iso2_to_iso3 = ISO2_TO_ISO3
+
+    def load_data(self, *args, **kwargs):
+        raise NotImplementedError("load_data is skipped for MMS as per request")
+
+    def load_data_jax(self, *args, **kwargs):
+        raise NotImplementedError("load_data_jax is skipped for MMS as per request")
+
+    def set_lang_detect_head(self, lang_detect_head):
+        self.head = lang_detect_head
+        if self.head:
+            lang1 = self.config.get("lang1")
+            lang2 = self.config.get("lang2")
+            if not lang1 or not lang2:
+                raise ValueError("When using a detection head, config must contain 'lang1' and 'lang2' (2-letter codes)")
+            self.lang1_iso = self.iso2_to_iso3.get(lang1, lang1)
+            self.lang2_iso = self.iso2_to_iso3.get(lang2, lang2)
+
+    def _detect_language_vanilla(self, audio_list):
+        inputs = self.processor(audio_list, sampling_rate=16000, padding="longest", return_tensors="pt")
+        input_values = inputs.input_values.to(self.device)
+        with torch.no_grad():
+            logits = self.lid_model(input_values).logits
+        pred_ids = torch.argmax(logits, dim=-1).cpu().tolist()
+        return [self.lid_model.config.id2label[pid] for pid in pred_ids]
+
+    def predict(self, audio):
+        # Ensure audio is a list (single np.ndarray or list of them)
+        if not isinstance(audio, list):
+            audio = [audio]
+
+        batch_size = len(audio)
+
+        # Prepare batch once
+        inputs = self.processor(audio, sampling_rate=16000, padding="longest", return_tensors="pt")
+        input_values = inputs.input_values.to(self.device)
+
+        # 1. Detect language(s)
+        if self.head:
+            # Run frozen encoder to get hidden states for the head
+            with torch.no_grad():
+                encoder_out = self.model.wav2vec2(input_values, output_hidden_states=True)
+                hidden = encoder_out.last_hidden_state  # (B, T, D)
+                pooled = hidden.mean(dim=1).cpu().numpy()  # (B, D) → numpy for sklearn heads
+                class_ids = self.head.predict(pooled)  # assume returns np.array of shape (B,)
+            detected_langs = [self.lang1_iso if cid == 0 else self.lang2_iso for cid in class_ids]
+        else:
+            detected_langs = self._detect_language_vanilla(audio)
+
+        self.lang_tokens = detected_langs
+
+        # 2. Transcribe – group by language to minimise adapter switching
+        transcriptions = [None] * batch_size
+        lang_to_indices = defaultdict(list)
+        for i, lang in enumerate(detected_langs):
+            lang_to_indices[lang].append(i)
+
+        for lang, indices in lang_to_indices.items():
+            batch_input = input_values[indices]
+            if self.current_adapter != lang:
+                self.model.load_adapter(lang)
+                self.current_adapter = lang
+
+            with torch.no_grad():
+                logits = self.model(batch_input).logits
+
+            pred_ids = torch.argmax(logits, dim=-1)
+            trans = self.processor.batch_decode(pred_ids, skip_special_tokens=True)
+
+            for k, orig_idx in enumerate(indices):
+                transcriptions[orig_idx] = trans[k]
+
+        # Return single values if input was single audio, otherwise lists
+        if batch_size == 1:
+            return self.lang_tokens[0], transcriptions[0]
+        return self.lang_tokens, transcriptions
+
+    def get_dimensions(self):
+        return self.model.config.hidden_size
+
+    def get_device(self):
+        return self.device

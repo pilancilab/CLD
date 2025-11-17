@@ -55,7 +55,7 @@ def main():
             pred_texts.extend(texts_batch)
             batch_temp = []
 
-    wer = 100.0 * wer_metric.compute(predictions=pred_texts, references=true_texts)
+    wer = 100.0 * wer_metric.compute(predictions=pred_texts, references=true_texts) 
     cer = 100.0 * cer_metric.compute(predictions=pred_texts, references=true_texts)
 
     # Get classification report as dict

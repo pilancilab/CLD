@@ -19,7 +19,24 @@ ISO2_TO_ISO3 = {
     "zh": "zho",
     "hi": "hin",
     "id": "ind",
-    "ms": "msa"
+    "ms": "zlm"
+}
+
+ISO3_TO_ISO2 = {
+    "cdo": "zh",
+    "cmn": "zh",
+    "cpx": "zh",
+    "czh": "zh",
+    "hak": "zh",
+    "hsn": "zh",
+    "mnp": "zh",
+    "nan": "zh",
+    "wuu": "zh",
+    "yue": "zh",
+    "eng": "en",
+    "hin": "hi",
+    "zlm": "ms",
+    "ind": "id"
 }
 
 class ASRModel(ABC):
@@ -241,39 +258,127 @@ class Whisper(ASRModel):
         id_to_lang_mapping =  dict(zip(self.model.generation_config.lang_to_id.values(), self.model.generation_config.lang_to_id.keys()))
         return id_to_lang_mapping.get(tid, "    ")[2:-2]
 
+
 class MMS(ASRModel):
     def __init__(self, model_name: str, config: dict = {}):
         super().__init__(model_name, config)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.processor = AutoProcessor.from_pretrained(model_name)
-        self.model = Wav2Vec2ForCTC.from_pretrained(model_name, torch_dtype=dtype).to(self.device)
-        self.lid_model = AutoModelForAudioClassification.from_pretrained("facebook/mms-lid-4017", torch_dtype=dtype).to(self.device)
+        self.model = Wav2Vec2ForCTC.from_pretrained(model_name).to(self.device, dtype=dtype)
+        self.lid_model = AutoModelForAudioClassification.from_pretrained("facebook/mms-lid-126").to(self.device, dtype=dtype)
         self.head = None
-        self.lang1_iso = None
-        self.lang2_iso = None
         self.current_adapter = None
 
         self.iso2_to_iso3 = ISO2_TO_ISO3
+        self.class_names = [self.iso2_to_iso3[cid] for cid in config.get("class_names", [])]
 
-    def load_data(self, *args, **kwargs):
-        raise NotImplementedError("load_data is skipped for MMS as per request")
+    def load_data(self, dataset_path: str, target_lang: str = 'en', caller_script: str = None, data_seed: int = 42, dataset_split: str = "train", shuffle=True, positive_label=1.0, negative_label=-1.0) -> Tuple[np.array, np.array]:
+        """
+        Load HF dataset, extract pooled model hidden states, return train/test splits.
+        
+        Args:
+            dataset_path (str): Path to local HF dataset dir (splits: train, valid, test).
+            target_lang (str): POS language code (e.g., 'en').
+            caller_script (str): 'defrun' for 90% data (convex training); else full.
+            data_seed (int): Seed for shuffle/split.
+        
+        Returns:
+            Atr, ytr, Atst, ytst, ntr, ntst: JAX arrays for features/labels (pooled to 768 dim).
+        """
+        np.random.seed(data_seed)
+        
+        # Load train split (main data for training)
+        dataset = load_from_disk(dataset_path)
+        train_data = dataset[dataset_split]
+        print(f"Loaded {len(train_data)} train samples")
+        
+        
+        def extract_pooled_hidden(audio) -> np.ndarray:
+            """Extract and pool last hidden states to (768,)."""
+            # Handle audio dict or path
+            if isinstance(audio, dict):
+                if audio.get('array') is not None:
+                    audio_arr = audio['array']
+                    sr = audio['sampling_rate']
+                else:
+                    audio_path = audio['path']
+                    if not os.path.exists(audio_path):
+                        return None
+                    waveform, sr = torchaudio.load(audio_path)
+                    audio_arr = waveform.mean(0).numpy()
+            else:
+                # Assume path if not dict
+                if not os.path.exists(audio):
+                    return None
+                waveform, sr = torchaudio.load(audio)
+                audio_arr = waveform.mean(0).numpy()
+            
+            # Resample to 16kHz
+            if sr != 16000:
+                resampler = torchaudio.transforms.Resample(sr, 16000)
+                audio_arr = resampler(torch.tensor(audio_arr)).numpy()
+            
+            # Process to input_features
+            inputs = self.processor(audio_arr, sampling_rate=16000, return_tensors='pt').to(self.get_device(), dtype=dtype)
+            
+            # Encoder last hidden
+            with torch.no_grad():
+                encoder_outputs = self.model.wav2vec2(inputs.input_values, output_hidden_states=True)
+                hidden = encoder_outputs.last_hidden_state.squeeze(0)  # (seq_len, 768)
+            
+            # Pool: Mean over seq_len
+            pooled = hidden.mean(0).cpu().numpy()  # (768,)
+            return pooled
+        
+        # Extract features and labels for all train samples
+        features = []
+        labels = []
+        valid_count = 0
 
-    def load_data_jax(self, *args, **kwargs):
-        raise NotImplementedError("load_data_jax is skipped for MMS as per request")
+        classes = set(sample['lang'] for sample in train_data)
+        classes_mapping = {lang: i for i, lang in enumerate(sorted(classes))}
+
+        for sample in train_data:
+            hidden = extract_pooled_hidden(sample['audio'])
+            if hidden is None:
+                continue  # Skip invalid audio
+            
+            if len(classes) == 2:
+                # binary
+                label = 1.0 if sample['lang'] == target_lang else -1.0
+            else:
+                # multiclass
+                label = classes_mapping[sample['lang']]
+
+
+            # label = positive_label if sample['lang'] == target_lang else negative_label
+            features.append(hidden)
+            labels.append(label)
+            valid_count += 1
+        
+        if valid_count == 0:
+            raise ValueError("No valid audio samples found")
+        
+        print(f"Extracted {valid_count} valid samples: {np.sum(np.array(labels) == 1)} POS, {np.sum(np.array(labels) == negative_label)} NEG")
+        
+        # Convert to arrays
+        A = np.array(features)
+        y = np.array(labels)
+        
+        # Shuffle
+        if shuffle:
+            perm = np.random.permutation(A.shape[0])
+            A = A[perm]
+            y = y[perm]
+
+        return A, y, len(classes)
 
     def set_lang_detect_head(self, lang_detect_head):
         self.head = lang_detect_head
-        if self.head:
-            lang1 = self.config.get("lang1")
-            lang2 = self.config.get("lang2")
-            if not lang1 or not lang2:
-                raise ValueError("When using a detection head, config must contain 'lang1' and 'lang2' (2-letter codes)")
-            self.lang1_iso = self.iso2_to_iso3.get(lang1, lang1)
-            self.lang2_iso = self.iso2_to_iso3.get(lang2, lang2)
 
     def _detect_language_vanilla(self, audio_list):
         inputs = self.processor(audio_list, sampling_rate=16000, padding="longest", return_tensors="pt")
-        input_values = inputs.input_values.to(self.device)
+        input_values = inputs.input_values.to(self.device, dtype=dtype)
         with torch.no_grad():
             logits = self.lid_model(input_values).logits
         pred_ids = torch.argmax(logits, dim=-1).cpu().tolist()
@@ -288,7 +393,7 @@ class MMS(ASRModel):
 
         # Prepare batch once
         inputs = self.processor(audio, sampling_rate=16000, padding="longest", return_tensors="pt")
-        input_values = inputs.input_values.to(self.device)
+        input_values = inputs.input_values.to(self.device, dtype=dtype)
 
         # 1. Detect language(s)
         if self.head:
@@ -298,11 +403,10 @@ class MMS(ASRModel):
                 hidden = encoder_out.last_hidden_state  # (B, T, D)
                 pooled = hidden.mean(dim=1).cpu().numpy()  # (B, D) → numpy for sklearn heads
                 class_ids = self.head.predict(pooled)  # assume returns np.array of shape (B,)
-            detected_langs = [self.lang1_iso if cid == 0 else self.lang2_iso for cid in class_ids]
+            detected_langs = [self.class_names[cid] for cid in class_ids]
         else:
             detected_langs = self._detect_language_vanilla(audio)
 
-        self.lang_tokens = detected_langs
 
         # 2. Transcribe – group by language to minimise adapter switching
         transcriptions = [None] * batch_size
@@ -313,8 +417,7 @@ class MMS(ASRModel):
         for lang, indices in lang_to_indices.items():
             batch_input = input_values[indices]
             if self.current_adapter != lang:
-                self.model.load_adapter(lang)
-                self.current_adapter = lang
+                self.set_adapter(lang)
 
             with torch.no_grad():
                 logits = self.model(batch_input).logits
@@ -325,13 +428,39 @@ class MMS(ASRModel):
             for k, orig_idx in enumerate(indices):
                 transcriptions[orig_idx] = trans[k]
 
+        detected_langs = [ISO3_TO_ISO2[token] if token in ISO3_TO_ISO2 else token for token in detected_langs]
+
         # Return single values if input was single audio, otherwise lists
         if batch_size == 1:
-            return self.lang_tokens[0], transcriptions[0]
-        return self.lang_tokens, transcriptions
+            return detected_langs[0], transcriptions[0]
+        
+
+        return detected_langs, transcriptions
 
     def get_dimensions(self):
         return self.model.config.hidden_size
 
     def get_device(self):
         return self.device
+    
+    def set_adapter(self, lang_id):
+        for script in POSSIBLE_SCRIPTS:
+            if script == "":
+                new_lang_id = lang_id
+            else:
+                new_lang_id = lang_id+"-script_"+script
+
+            try:
+                self.processor.tokenizer.set_target_lang(new_lang_id)
+                self.model.load_adapter(new_lang_id)
+                self.current_adapter = lang_id
+                return
+            except ValueError:
+                pass
+        
+        # raise ValueError(f"No adapter found for {lang_id}")
+        new_lang_id = "eng"
+        self.processor.tokenizer.set_target_lang(new_lang_id)
+        self.model.load_adapter(new_lang_id)
+        self.current_adapter = lang_id
+

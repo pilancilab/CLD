@@ -266,7 +266,7 @@ class Whisper(ASRModel):
         input_features = input_features.to(self.get_device(), dtype=dtype)
 
         self.lang_tokens = []
-        predicted_ids = self.model.generate(input_features)
+        predicted_ids = self.model.generate(input_features, repetition_penalty=1.1, temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), compression_ratio_threshold=1.35)
         transcription = self.processor.batch_decode(predicted_ids, skip_special_tokens=True)        
         if(self.head is None or getattr(self.head, "SKIP", False)):
             self.lang_tokens = self._detect_language_vanilla(input_features)

@@ -109,8 +109,13 @@ def whisper_custom_retrieve_init_tokens_creator(asr_model, languages):
         lang_tokens = [lang_to_id(self, lang) for lang in chosen_langs]
         asr_model.lang_tokens.extend(chosen_langs)
         
+        gen_cfg = generation_config if generation_config is not None else self.generation_config
         # Return init tokens: [start, lang, transcribe]
-        init_tokens = [[50258, lang_token, 50359] for lang_token in lang_tokens]
+        sot_token = gen_cfg.decoder_start_token_id
+        # Most Whisper models use <|transcribe|> by default; 
+        # check if it's set, otherwise use the forced_decoder_ids or a default
+        transcribe_token = gen_cfg.transcribe_to_id.get("<|transcribe|>", 50359)
+        init_tokens = [[sot_token, lang_token, transcribe_token] for lang_token in lang_tokens]
         
         init_tokens_tensor = torch.tensor(init_tokens, 
                                           dtype=torch.long, 
@@ -267,6 +272,8 @@ class Whisper(ASRModel):
         self.lang_tokens = []
         predicted_ids = self.model.generate(input_features)
         transcription = self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
+        print(transcription)
+        print(self.lang_tokens)
         if(self.head is None or getattr(self.head, "SKIP", False)):
             self.lang_tokens = self._detect_language_vanilla(input_features)
         return self.lang_tokens, transcription

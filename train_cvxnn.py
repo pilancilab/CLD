@@ -46,7 +46,7 @@ def run(model_name, dataset_path, cronos_params, adamW_params, opt_seed, data_se
     
     Args:
         model_name: Name of the model/dataset
-        data_dir: Directory containing input data
+        dataset_path: Directory containing input data
         cronos_params: Parameters for CRONOS optimizer
         adamW_params: Parameters for AdamW optimizer
         opt_seed: Random seed for optimization
@@ -235,7 +235,7 @@ if __name__ == "__main__":
     # Run model training and evaluation
     results: RunResults = run(
         model_name=args.model_name, 
-        data_dir=args.data_dir, 
+        dataset_path=args.dataset_path, 
         cronos_params=cronos_params, 
         adamW_params=adamW_params, 
         opt_seed=args.opt_seed, 

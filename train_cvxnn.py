@@ -40,7 +40,7 @@ def estimate_tflops(duration_seconds):
     tflops_used = (gflops_per_sec * duration_seconds) / 1000
     return tflops_used
 
-def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, output_dir, target_lang):
+def run(model_name, dataset_path, cronos_params, adamW_params, opt_seed, data_seed, output_dir, languages):
     """
     Run the CRONOS training pipeline for CVX-DPO.
     
@@ -52,7 +52,7 @@ def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, 
         opt_seed: Random seed for optimization
         data_seed: Random seed for data loading
         output_dir: Directory to save outputs
-        target_lang: Target language identifier
+        languages: Comma-separated list of languages to train on
     
     Returns:
         RunResults: NamedTuple with results and paths
@@ -63,18 +63,18 @@ def run(model_name, data_dir, cronos_params, adamW_params, opt_seed, data_seed, 
     global_best_delta_params = {}
 
     # Load the training and test data
-    print(f"Loading data from {data_dir} for target language {target_lang}...")
-    asr_model = ASRModel.from_pretrained(model_name)
-    Atr, ytr, num_classes = asr_model.load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun", dataset_split="train")
-    Atst, ytst, _ = asr_model.load_data(data_dir, target_lang, data_seed=data_seed, caller_script="defrun", dataset_split="valid")
+    print(f"Loading data from {dataset_path} for languages {languages}...")
+    asr_model = ASRModel.from_pretrained(model_name, config={"languages": languages})
+    Atr, ytr = asr_model.load_data(dataset_path, data_seed=data_seed, caller_script="defrun", dataset_split="train")
+    Atst, ytst, _ = asr_model.load_data(dataset_path, data_seed=data_seed, caller_script="defrun", dataset_split="valid")
     
     ##### CRONOS #####
     # Number of neurons in the convex network (mapped from 'rank' parameter if P_S not set)
-    num_neurons = cronos_params.get('rank')
+    num_neurons = cronos_params.get('neuron')
     
     # Create the convex neural network model
     model = CVX_ReLU_MLP(
-        Atr, ytr, num_classes, num_neurons, 
+        Atr, ytr, len(languages), num_neurons, 
         cronos_params['beta'], cronos_params['rho'], 
         jax.random.PRNGKey(0)
     )
@@ -162,16 +162,17 @@ if __name__ == "__main__":
     
     # Required Arguments
     parser.add_argument('--model_name', type=str, required=True, help="Name of the model/experiment")
-    parser.add_argument('--data_dir', type=str, required=True, help="Path to data directory")
+    parser.add_argument('--dataset_path', type=str, required=True, help="Path to data directory")
     parser.add_argument('--output_dir', type=str, required=True, help="Path to output directory")
     
     # Optional Arguments (General)
-    parser.add_argument('--target_lang', type=str, default='en', help="Target language (default: en)")
+    parser.add_argument('--languages', type=str, required=True, help="Comma-separated list of languages to train on")
     parser.add_argument('--opt_seed', type=int, default=1024, help="Optimization seed")
     parser.add_argument('--data_seed', type=int, default=None, help="Data seed (default: random 1-10)")
 
     # CRONOS Hyperparameters
-    parser.add_argument('--rank', type=int, default=64, help="Rank/Neurons for CRONOS (default: 64)")
+    parser.add_argument('--rank', type=int, default=20, help="Rank for CRONOS (default: 20)")
+    parser.add_argument('--neuron', type=int, default=64, help="Number of neurons for CRONOS (default: 64)")
     parser.add_argument('--beta', type=float, default=0.001, help="Beta parameter (default: 0.001)")
     parser.add_argument('--rho', type=float, default=0.1, help="Rho parameter (default: 0.1)")
     parser.add_argument('--gamma_ratio', type=float, default=1, help="Gamma ratio (default: 1)")

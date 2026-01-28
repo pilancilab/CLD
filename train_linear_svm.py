@@ -166,7 +166,10 @@ def run(
     os.makedirs(model_dir, exist_ok=True)
 
     # Save model
-    model_path = os.path.join(model_dir, f"{model_name}_linear_svm.pkl").replace("/", "_")
+    # NOTE: model_name may include slashes (e.g. "openai/whisper-small"). We want to keep
+    # those slashes for directories (model_dir), but sanitize them in the filename only.
+    safe_model_name = model_name.replace("/", "_")
+    model_path = os.path.join(model_dir, f"{safe_model_name}_linear_svm.pkl")
     with open(model_path, "wb") as f:
         pickle.dump(clf, f)
 

@@ -166,7 +166,7 @@ def run(
     os.makedirs(model_dir, exist_ok=True)
 
     # Save model
-    model_path = os.path.join(model_dir, f"{model_name}_linear_svm.pkl")
+    model_path = os.path.join(model_dir, f"{model_name}_linear_svm.pkl").replace("/", "_")
     with open(model_path, "wb") as f:
         pickle.dump(clf, f)
 

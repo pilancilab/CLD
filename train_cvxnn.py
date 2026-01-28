@@ -139,6 +139,7 @@ def run(model_name, dataset_path, cronos_params, adamW_params, opt_seed, data_se
     metrics_df.to_csv(csv_path, sep='\t', encoding='utf-8', index=False, header=True)
 
     # Save the trained convex model
+    model_name = model_name.replace("/", "_")
     trained_model_path = os.path.join(model_dir, f"{model_name}_trained_cvx_mlp.pkl")
     with open(trained_model_path, 'wb') as f:
         pickle.dump(model, f)

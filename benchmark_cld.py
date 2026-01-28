@@ -1,7 +1,7 @@
 import argparse
 from datasets import load_from_disk
 from cld.models.asr_model import ASRModel
-from cld.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead
+from cld.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead, SVMLangDetectHead
 from sklearn.metrics import classification_report
 from transformers import WhisperProcessor
 import evaluate
@@ -34,6 +34,8 @@ def main():
         lang_detect_head = NNLangDetectHead.load(args.cld_path, asr_model)
     elif args.cld_type == 'cvx':
         lang_detect_head = CVXNNLangDetectHead.load(args.cld_path, asr_model)
+    elif args.cld_type == 'linear_svm':
+        lang_detect_head = SVMLangDetectHead.load(args.cld_path, asr_model)
     asr_model.set_lang_detect_head(lang_detect_head)
 
     # Use test split consistently

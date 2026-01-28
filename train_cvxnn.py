@@ -193,6 +193,7 @@ if __name__ == "__main__":
     # Construct parameter dictionaries from arguments
     cronos_params = dict(
         rank=args.rank,
+        neuron=args.neuron,
         beta=args.beta,
         rho=args.rho,
         gamma_ratio=args.gamma_ratio,
@@ -221,6 +222,7 @@ if __name__ == "__main__":
             "output_dir": args.output_dir,
             # Flattened config for easier filtering
             "rank": args.rank,
+            "neuron": args.neuron,
             "beta": args.beta,
             "rho": args.rho,
             "admm_iters": args.admm_iters,

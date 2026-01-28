@@ -20,6 +20,21 @@ def get_hyperplane_cuts(X: jnp.ndarray, P: int, seed=None) -> jnp.ndarray:
         n x P matrix, where each column i is the diagonal entries for D_i.
     """
     n, d = X.shape
+    if P is None:
+        raise ValueError(
+            "get_hyperplane_cuts() received P=None (number of hyperplane samples / neurons). "
+            "Ensure you pass a concrete integer for P_S / --neuron."
+        )
+    if not isinstance(P, int):
+        # Avoid hard dependency on numpy here; accept python int always.
+        try:
+            P = int(P)
+        except Exception as e:
+            raise TypeError(
+                f"get_hyperplane_cuts() expected P to be an int, got {type(P)}: {P!r}"
+            ) from e
+    if P <= 0:
+        raise ValueError(f"get_hyperplane_cuts() expected P > 0, got {P}")
     if seed is not None:
         key,subkey = jrn.split(seed)
     else:

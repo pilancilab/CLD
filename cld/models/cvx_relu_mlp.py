@@ -1,6 +1,6 @@
 import jax
-from models.cvx_mlp import Convex_MLP
-from utils.model_utils import get_hyperplane_cuts, optimal_weights_transform
+from .cvx_mlp import Convex_MLP
+from ..utils.model_utils import get_hyperplane_cuts, optimal_weights_transform
 import jax.numpy as jnp
 from jax import jit, vmap, tree_util
 

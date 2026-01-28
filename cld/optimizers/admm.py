@@ -1,10 +1,10 @@
 import jax 
 import jax.numpy as jnp
-from optimizers.pcg import pcg
-from preconditioner.nystrom import Nys_Precond,rand_nys_appx
-from utils.metric_utils import mse, classification_accuracy
-from utils.model_utils import optimal_weights_transform
-from utils.proximal_utils import batch_proxl2_tensor
+from .pcg import pcg
+from ..preconditioner.nystrom import Nys_Precond, rand_nys_appx
+from ..utils.metric_utils import mse, classification_accuracy
+from ..utils.model_utils import optimal_weights_transform
+from ..utils.proximal_utils import batch_proxl2_tensor
 
 def admm(model,admm_params):
     rank = admm_params['rank']
@@ -73,7 +73,7 @@ def admm(model,admm_params):
         v_optimality = jnp.linalg.norm(beta * v / jnp.linalg.norm(v, axis=2, keepdims=True) - model.rho * lam)
         return u_v_dist, u_optimality, v_optimality
     
-    for _ in range(admm_iters):
+    for k in range(admm_iters):
 
         u, v, s, lam, nu, Gu = _admm_step(u, v, s, lam, nu)
 

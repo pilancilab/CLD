@@ -3,14 +3,14 @@ from jax._src.ad_checkpoint import checkpoint
 import jax.numpy as jnp
 import jax.random as jrn
 from jax import grad, jit
-from models.get_model import init_model
-from models.cvx_relu_mlp import CVX_ReLU_MLP
-from utils.model_utils import optimal_weights_transform
-from utils.opt_utils import get_optimizer
-from optimizers.cronos import admm
+from ..models.get_model import init_model
+from ..models.cvx_relu_mlp import CVX_ReLU_MLP
+from ..utils.model_utils import optimal_weights_transform
+from ..utils.opt_utils import get_optimizer
+from ..optimizers.admm import admm
 from time import perf_counter
-from utils.metric_utils import get_model_performance
-from utils.train_utils import get_batch
+from ..utils.metric_utils import get_model_performance
+from ..utils.train_utils import get_batch
 
 def train(Xtr, ytr, Xtst, ytst, model_params, opt_params, task):
 

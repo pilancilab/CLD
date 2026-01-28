@@ -1,6 +1,6 @@
 import optax
 from jax import jit, tree_util
-from optimizers.dist_shampoo.distributed_shampoo import distributed_shampoo
+from .dist_shampoo.distributed_shampoo import distributed_shampoo
 
 class Shampoo:
     def __init__(self, 

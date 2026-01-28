@@ -1,5 +1,5 @@
-from models.cvx_mlp import Convex_MLP
-from utils.model_utils import get_grelu_patterns, grelu_optimal_weights_transform
+from .cvx_mlp import Convex_MLP
+from ..utils.model_utils import get_grelu_patterns, grelu_optimal_weights_transform
 import jax.numpy as jnp
 from jax import jit, tree_util
 

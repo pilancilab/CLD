@@ -90,15 +90,15 @@ class CVXNNLangDetectHead(LangDetectHead):
     
     def predict(self, hidden):
         pooled = hidden.mean(dim=1).cpu().detach().numpy()  # Move to CPU and numpy for predict
-        logits = self.head.predict(pooled, self.head.theta1, self.head.theta2)
+        # theta1/theta2 stored by ADMM are batched per-class weights:
+        # - theta1: (C, d, m)
+        # - theta2: (C, m)
+        # so we must use stacked_predict to obtain (B, C) logits.
+        logits = self.head.stacked_predict(pooled, self.head.theta1, self.head.theta2)
         logits = np.asarray(logits)
-        # Binary heads may output shape (B,) or (B, 1). Multiclass heads output (B, C).
         if logits.ndim == 1:
-            # Convention: positive => class 0, negative => class 1
-            return [0 if x > 0 else 1 for x in logits.tolist()]
-        if logits.ndim == 2 and logits.shape[1] == 1:
-            flat = logits[:, 0]
-            return [0 if x > 0 else 1 for x in flat.tolist()]
+            # Degenerate case (C==1): return all zeros
+            return [0 for _ in range(int(logits.shape[0]))]
         return logits.argmax(axis=1).tolist()
 
 

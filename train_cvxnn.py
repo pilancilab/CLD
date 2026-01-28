@@ -241,7 +241,7 @@ if __name__ == "__main__":
         opt_seed=args.opt_seed, 
         data_seed=args.data_seed, 
         output_dir=args.output_dir, 
-        target_lang=args.target_lang
+        languages=args.languages.split(",")
     )
 
     elapsed_time = time.time() - start_time

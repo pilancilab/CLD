@@ -1,7 +1,7 @@
-# CLARA: Convex Low-Resource Accent-Robust Language Detection in ASR
+# Convex Low-Resource Accent-Robust Language Detection in ASR
 
 ## Overview
-CLARA is an efficient pipeline for accent-robust, multilingual ASR with lightweight language detection. It integrates Whisper fine-tuning with a convex binary language head (cvxNN), implemented in JAX and optimized via ADMM for high performance in low-resource settings.
+This repo presents CLD, an efficient pipeline for accent-robust, multilingual ASR with lightweight language detection. It integrates Whisper fine-tuning with a convex binary language head (cvxNN), implemented in JAX and optimized via ADMM for high performance in low-resource settings.
 
 ![Fig 1&2](assets/fig_1_2.png)
 ![Table 2](assets/table_2.png)
@@ -82,7 +82,6 @@ python whisper_training.py \
   --eval_steps 1000 \
   --save_steps 1000 \
   --logging_steps 25 \
-  --wandb_project clara-asr \
   --run_name whisper-small-enhi
 ```
 

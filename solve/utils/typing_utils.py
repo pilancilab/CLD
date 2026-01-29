@@ -64,7 +64,6 @@ def convert_backend_type(x: ArrayType,
     Convert input data to the right type
     Input x must be one of [np.ndarray, np.array, torch.tensor, jax.numpy.ndarray, jax.numpy.array]
     If jax or torch, load to the device too
-    @MIRIA: confirm
     """
         
     assert target_backend in DATATYPE_BACKENDS, f"Parameter \"target_backend\" must be one of {DATATYPE_BACKENDS}." 

@@ -17,49 +17,49 @@ def load_data(model_name, data_seed, caller_script=None):
     
     # Define a mapping of model names to their paths
     model_paths = {
-        # 'gpt2_imdb_trained': "/home/miria/CVXDPO/extracted_features_attn_NEG_POS_checkpoint_gpt2_e1_imdb",
-        # 'gpt2_attn_ultra': "/home/miria/CVXDPO/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
-        # 'gpt2_attn_edu': "/home/miria/CVXDPO/extracted_features/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
+        # 'gpt2_imdb_trained': "/home/--/CVXDPO/extracted_features_attn_NEG_POS_checkpoint_gpt2_e1_imdb",
+        # 'gpt2_attn_ultra': "/home/--/CVXDPO/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
+        # 'gpt2_attn_edu': "/home/--/CVXDPO/extracted_features/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
         # 'gpt2_lmhead_commune': join(dirname(abspath('content')), 'datasets', 'gpt2lmhead_commu'),
 
         # SFT base trained model paths - batchsize64
-        'dolphin_imdb_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_dolphin-2.1-7b_imdb/",
-        'dolphin_edu_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_edu",
-        'dolphin_ultra_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_ultra",
-        'llama_edu_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_edu",
-        'llama_imdb_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_imdb",
-        'llama_ultra_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_ultra",
-        'mistral_edu_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_edu",
-        'mistral_imdb_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_imdb",
-        'mistral_ultra_sft': "/home/miria/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_ultra",
+        'dolphin_imdb_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_dolphin-2.1-7b_imdb/",
+        'dolphin_edu_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_edu",
+        'dolphin_ultra_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_ultra",
+        'llama_edu_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_edu",
+        'llama_imdb_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_imdb",
+        'llama_ultra_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_ultra",
+        'mistral_edu_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_edu",
+        'mistral_imdb_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_imdb",
+        'mistral_ultra_sft': "/home/--/CVXDPO/extracted_features/batchsize64/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_ultra",
 
         # batchsize150
-        'distilgpt2_edu_sft': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_edu_edu/",
-        'distilgpt2_imdb_sft': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_imdb_all/",
-        'distilgpt2_ultra_sft': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_ultra",
-        'gpt2_edu_sft': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
-        'gpt2_imdb_sft': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_imdb_all/",
-        'gpt2_ultra_sft': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
+        'distilgpt2_edu_sft': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_edu_edu/",
+        'distilgpt2_imdb_sft': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_imdb_all/",
+        'distilgpt2_ultra_sft': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_ultra",
+        'gpt2_edu_sft': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
+        'gpt2_imdb_sft': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_imdb_all/",
+        'gpt2_ultra_sft': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
 
 
         # No SFT base trained model paths - batchsize64 or batchsize8
-        'dolphin_imdb': "/home/miria/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_dolphin-2.1-mistral-7b_imdb",
-        'dolphin_edu': "/home/miria/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_dolphin-2.1-mistral-7b_edu",
-        'dolphin_ultra': "/home/miria/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_dolphin-2.1-mistral-7b_ultra",
-        'llama_edu': "/home/miria/CVXDPO/extracted_features0504/batchsize8/extracted_features_attn_NEG_POS_Llama-3.1-8B_edu",
-        'llama_imdb': "/home/miria/CVXDPO/extracted_features0504/batchsize8/extracted_features_attn_NEG_POS_Llama-3.1-8B_imdb/",
-        'llama_ultra': "/home/miria/CVXDPO/extracted_features0504/batchsize8/extracted_features_attn_NEG_POS_Llama-3.1-8B_ultra",
-        'mistral_edu': "/home/miria/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_Mistral-7B-v0.1_edu",
-        'mistral_imdb': "/home/miria/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_Mistral-7B-v0.1_imdb",
-        'mistral_ultra': "/home/miria/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_Mistral-7B-v0.1_ultra",
+        'dolphin_imdb': "/home/--/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_dolphin-2.1-mistral-7b_imdb",
+        'dolphin_edu': "/home/--/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_dolphin-2.1-mistral-7b_edu",
+        'dolphin_ultra': "/home/--/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_dolphin-2.1-mistral-7b_ultra",
+        'llama_edu': "/home/--/CVXDPO/extracted_features0504/batchsize8/extracted_features_attn_NEG_POS_Llama-3.1-8B_edu",
+        'llama_imdb': "/home/--/CVXDPO/extracted_features0504/batchsize8/extracted_features_attn_NEG_POS_Llama-3.1-8B_imdb/",
+        'llama_ultra': "/home/--/CVXDPO/extracted_features0504/batchsize8/extracted_features_attn_NEG_POS_Llama-3.1-8B_ultra",
+        'mistral_edu': "/home/--/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_Mistral-7B-v0.1_edu",
+        'mistral_imdb': "/home/--/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_Mistral-7B-v0.1_imdb",
+        'mistral_ultra': "/home/--/CVXDPO/extracted_features0504/batchsize64/extracted_features_attn_NEG_POS_Mistral-7B-v0.1_ultra",
 
         # batchsize150
-        'distilgpt2_edu': "/home/miria/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_distilgpt2_edu/",
-        'distilgpt2_imdb': "/home/miria/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_distilgpt2_all",
-        'distilgpt2_ultra': "/home/miria/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_distilgpt2_ultra",
-        'gpt2_edu': "/home/miria/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_gpt2_edu/",
-        'gpt2_imdb': "/home/miria/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_gpt2_all",
-        'gpt2_ultra': "/home/miria/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_gpt2_ultra/",
+        'distilgpt2_edu': "/home/--/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_distilgpt2_edu/",
+        'distilgpt2_imdb': "/home/--/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_distilgpt2_all",
+        'distilgpt2_ultra': "/home/--/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_distilgpt2_ultra",
+        'gpt2_edu': "/home/--/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_gpt2_edu/",
+        'gpt2_imdb': "/home/--/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_gpt2_all",
+        'gpt2_ultra': "/home/--/CVXDPO/extracted_features0504/batchsize150/extracted_features_attn_NEG_POS_gpt2_ultra/",
     }
     
     # Define file name patterns for different models
@@ -325,29 +325,29 @@ def load_data(model_name, data_seed, caller_script=None):
     
 #     # Define a mapping of model names to their paths
 #     model_paths = {
-#         'gpt2_imdb_trained': "/home/miria/CVXDPO/extracted_features_attn_NEG_POS_checkpoint_gpt2_e1_imdb",
-#         'gpt2_attn_ultra': "/home/miria/CVXDPO/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
-#         'gpt2_attn_edu': "/home/miria/CVXDPO/extracted_features/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
+#         'gpt2_imdb_trained': "/home/--/CVXDPO/extracted_features_attn_NEG_POS_checkpoint_gpt2_e1_imdb",
+#         'gpt2_attn_ultra': "/home/--/CVXDPO/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
+#         'gpt2_attn_edu': "/home/--/CVXDPO/extracted_features/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
 #         'gpt2_lmhead_commune': join(dirname(abspath('content')), 'datasets', 'gpt2lmhead_commu'),
 
 #         # New model paths — batchsize24
-#         'dolphin_imdb': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_dolphin-2.1-7b_imdb",
-#         'dolphin_edu': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_edu",
-#         'dolphin_ultra': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_ultra",
-#         'llama_edu': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_edu",
-#         'llama_imdb': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_imdb",
-#         'llama_ultra': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_ultra",
-#         'mistral_edu': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_edu",
-#         'mistral_imdb': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_imdb",
-#         'mistral_ultra': "/home/miria/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_ultra",
+#         'dolphin_imdb': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_dolphin-2.1-7b_imdb",
+#         'dolphin_edu': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_edu",
+#         'dolphin_ultra': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_dolphin2.1-7B_ultra",
+#         'llama_edu': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_edu",
+#         'llama_imdb': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_imdb",
+#         'llama_ultra': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_meta-llama_Llama-3.1-8B_ultra",
+#         'mistral_edu': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_edu",
+#         'mistral_imdb': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_imdb",
+#         'mistral_ultra': "/home/--/CVXDPO/extracted_features/batchsize24/extracted_features_attn_NEG_POS_SFT_mistralai_Mistral-7B-v0.1_ultra",
 
 #         # New model paths — batchsize150
-#         'distilgpt2_edu': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_edu",
-#         'distilgpt2_imdb': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_imdb",
-#         'distilgpt2_ultra': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_ultra",
-#         'gpt2_edu': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
-#         'gpt2_imdb': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_imdb",
-#         'gpt2_ultra': "/home/miria/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
+#         'distilgpt2_edu': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_edu",
+#         'distilgpt2_imdb': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_imdb",
+#         'distilgpt2_ultra': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_distilbert_distilgpt2_ultra",
+#         'gpt2_edu': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_edu",
+#         'gpt2_imdb': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_imdb",
+#         'gpt2_ultra': "/home/--/CVXDPO/extracted_features/batchsize150/extracted_features_attn_NEG_POS_SFT_openai-community_gpt2_ultra",
 #     }
 
     

@@ -34,7 +34,7 @@ model_names = [
     'gpt2seqhead_med'
 ]
 
-OUTPUT_DIR = '/home/miria/ZACH/RESULTS/search'
+OUTPUT_DIR = '/home/--/--/RESULTS/search'
 
 # adamW params
 adamW_params = dict(optimizer='AdamW_nojit', gamma=10**-4, n_epoch=30, batch_size=1024)

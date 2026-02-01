@@ -13,6 +13,8 @@ __version__ = "0.1.0"
 __all__ = [
     "ASRModel",
     "CVXNNLangDetectHead",
+    "NNLangDetectHead",
+    "SVMLangDetectHead",
 ]
 
 
@@ -28,6 +30,14 @@ def __getattr__(name: str):
             from .models.lang_detect_head import CVXNNLangDetectHead
 
             return CVXNNLangDetectHead
+        if name == "NNLangDetectHead":
+            from .models.lang_detect_head import NNLangDetectHead
+
+            return NNLangDetectHead
+        if name == "SVMLangDetectHead":
+            from .models.lang_detect_head import SVMLangDetectHead
+
+            return SVMLangDetectHead
     except ModuleNotFoundError as e:
         raise ImportError(
             "Missing optional dependency. Install CLD with its runtime dependencies, e.g. "

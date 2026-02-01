@@ -10,7 +10,7 @@ It produces an artifact compatible with:
 
 Example:
   python train_nn.py \
-    --dataset_path /Users/williamtan/Projects/CLD-merge/data/test/final_dry \
+    --dataset_path data/multiclass \
     --model_name openai/whisper-small \
     --languages en,hi,id,ms,zh \
     --output_dir data/test/test_nn

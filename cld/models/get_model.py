@@ -3,7 +3,7 @@ import jax.numpy as jnp
 
 def init_model(model_params, x, key):
     if model_params['type'] == 'relu-mlp':
-        from models import ReLU_MLP
+        from .relu_mlp import ReLU_MLP
         model = ReLU_MLP()
         params = model.init(key, x)
     elif model_params['type'] == 'two_layer_mlp':
@@ -12,7 +12,7 @@ def init_model(model_params, x, key):
         model = Two_Layer_ReLU_MLP() 
         params = model.init(key, x)
     elif model_params['type'] == 'varpro-mlp':
-        from models import VarPro_MLP
+        from .relu_mlp import VarPro_MLP
         model = VarPro_MLP()
         params = model.init(key, x)
    

@@ -68,7 +68,7 @@ class ASRModel(ABC):
         return A, y
 
     @abstractmethod
-    def set_lang_detect_head(lang_detect_head):
+    def set_lang_detect_head(self, lang_detect_head):
         pass
 
     @abstractmethod

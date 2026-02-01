@@ -1,7 +1,6 @@
 import argparse
 from datasets import load_from_disk
-from cld.models.asr_model import ASRModel
-from cld.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead, SVMLangDetectHead
+from cld import ASRModel, CVXNNLangDetectHead, NNLangDetectHead, SVMLangDetectHead
 from sklearn.metrics import classification_report
 import evaluate
 import wandb

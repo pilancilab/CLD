@@ -213,3 +213,30 @@ wandb/
 /models/
 
 .DS_Store
+
+# Python package build artifacts
+
+# Build directories
+/dist/
+/build/
+/*.egg-info/
+/.eggs/
+
+# Installation artifacts
+pip-wheel-metadata/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Package development
+*.so
+*.dylib
+*.dll
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+

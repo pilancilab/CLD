@@ -1,6 +1,32 @@
-## Convex Low-resource Accent-Robust Language Detection in Speech Recognition
+<table border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td width="70%" valign="middle">
+
+<h1>CLD</h1>
+
+<b>Convex Low-resource Accent-Robust Language Detection in Speech Recognition</b><br>
+A lightweight language-detection module for multilingual ASR, optimized via ADMM in JAX.
+
+<p>
+  <a href="paper/"><img alt="paper" src="https://img.shields.io/badge/paper-PDF-blue.svg"></a>
+  <a href="https://pypi.org/project/jaxcld/"><img alt="pypi" src="https://img.shields.io/badge/pip-jaxcld-3775A9.svg?logo=pypi&logoColor=white"></a>
+  <img alt="python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
+  <img alt="jax" src="https://img.shields.io/badge/jax-0.4%2B-orange.svg">
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-green.svg">
+</p>
+
+</td>
+<td width="30%" valign="middle" align="right">
+<img src="assets/CLD_logo.png" alt="CLD" width="240">
+</td>
+</tr>
+</table>
+
+---
 
 This repository provides the official implementation of **CLD**, a lightweight language-detection module for multilingual ASR. This codebase contains our pip-installable Python package (`cld/`) including our training/benchmark scripts implemented in JAX and optimized via ADMM for high performance in low-resource settings. Simply, the package attaches a small language detection head (Convex NN / small NN / linear SVM) to ASR encoder representations, and use it to select the language token (Whisper) or adapter (MMS) before decoding.
+
+The paper PDF is available in [`paper/`](paper/) and the pip-installable package is published at [pypi.org/project/jaxcld](https://pypi.org/project/jaxcld/).
 
 ![Approach overview](assets/fig_1_2.png)
 

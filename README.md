@@ -319,11 +319,10 @@ If you use this code in your work, please cite the paper:
 @inproceedings{feng2026cld,
   title     = {Convex Low-resource Accent-Robust Language Detection in Speech Recognition},
   author    = {Feng, Miria and Tan, William and Pilanci, Mert},
-  booktitle = {Proceedings of the 43rd International Conference on Machine Learning (ICML)},
-  series    = {PMLR},
-  volume    = {306},
+  booktitle = {Proceedings of the 43rd International Conference on Machine Learning},
   year      = {2026},
-  address   = {Seoul, South Korea},
+  series    = {Proceedings of Machine Learning Research},
+  publisher = {PMLR},
   url       = {https://icml.cc/virtual/2026/poster/64615}
 }
 ```

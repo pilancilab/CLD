@@ -8,7 +8,7 @@
 A lightweight language-detection module for multilingual ASR, optimized via ADMM in JAX.
 
 <p>
-  <a href="paper/"><img alt="paper" src="https://img.shields.io/badge/paper-PDF-blue.svg"></a>
+  <a href="paper/Convex_ASR_icml2026.pdf"><img alt="paper" src="https://img.shields.io/badge/paper-ICML%202026-blue.svg"></a>
   <a href="https://pypi.org/project/jaxcld/"><img alt="pypi" src="https://img.shields.io/badge/pip-jaxcld-3775A9.svg?logo=pypi&logoColor=white"></a>
   <img alt="python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
   <img alt="jax" src="https://img.shields.io/badge/jax-0.4%2B-orange.svg">

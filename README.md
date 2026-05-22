@@ -8,7 +8,7 @@
 A lightweight language-detection module for multilingual ASR, optimized via ADMM in JAX.
 
 <p>
-  <a href="paper/Convex_ASR_icml2026.pdf"><img alt="paper" src="https://img.shields.io/badge/paper-ICML%202026-blue.svg"></a>
+  <a href="https://icml.cc/virtual/2026/poster/64615"><img alt="paper" src="https://img.shields.io/badge/paper-ICML%202026-blue.svg"></a>
   <a href="https://pypi.org/project/jaxcld/"><img alt="pypi" src="https://img.shields.io/badge/pip-jaxcld-3775A9.svg?logo=pypi&logoColor=white"></a>
   <img alt="python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
   <img alt="jax" src="https://img.shields.io/badge/jax-0.4%2B-orange.svg">
@@ -311,18 +311,22 @@ Note: tests are designed to **skip** if the local dataset at `data/test/final_dr
 
 MIT (see `pyproject.toml`). -->
 
-<!-- ## Citation
+## Citation
 
 If you use this code in your work, please cite the paper:
 
 ```bibtex
-@article{cld2026,
-  title   = {CLD: Convex Language Detection Heads for Accent-Robust Multilingual ASR},
-  author  = {TBD},
-  journal = {TBD},
-  year    = {2026}
+@inproceedings{feng2026cld,
+  title     = {Convex Low-resource Accent-Robust Language Detection in Speech Recognition},
+  author    = {Feng, Miria and Tan, William and Pilanci, Mert},
+  booktitle = {Proceedings of the 43rd International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {306},
+  year      = {2026},
+  address   = {Seoul, South Korea},
+  url       = {https://icml.cc/virtual/2026/poster/64615}
 }
-``` -->
+```
 
 <!-- ## Questions / missing info (to finalize this README)
 

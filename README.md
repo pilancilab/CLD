@@ -50,7 +50,13 @@ The paper PDF is available in [`paper/`](paper/) and the pip-installable package
 
 ## Requirements
 
-This repo supports two common setups:
+The package is published on PyPI as [`jaxcld`](https://pypi.org/project/jaxcld/). For inference usage, install it directly:
+
+```bash
+pip install jaxcld
+```
+
+If you've cloned this repo, you can instead install from source:
 
 - **Package-only install** (inference usage):
 

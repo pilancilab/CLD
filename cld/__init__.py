@@ -14,6 +14,7 @@ __all__ = [
     "ASRModel",
     "CVXNNLangDetectHead",
     "NNLangDetectHead",
+    "SklearnLangDetectHead",
     "SVMLangDetectHead",
 ]
 
@@ -34,6 +35,10 @@ def __getattr__(name: str):
             from .models.lang_detect_head import NNLangDetectHead
 
             return NNLangDetectHead
+        if name == "SklearnLangDetectHead":
+            from .models.lang_detect_head import SklearnLangDetectHead
+
+            return SklearnLangDetectHead
         if name == "SVMLangDetectHead":
             from .models.lang_detect_head import SVMLangDetectHead
 

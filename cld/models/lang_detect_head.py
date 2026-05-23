@@ -102,7 +102,7 @@ class CVXNNLangDetectHead(LangDetectHead):
         return logits.argmax(axis=1).tolist()
 
 
-class SVMLangDetectHead(LangDetectHead):
+class SklearnLangDetectHead(LangDetectHead):
     """
     sklearn-based language detection head.
 
@@ -117,12 +117,12 @@ class SVMLangDetectHead(LangDetectHead):
     @staticmethod
     def load(filepath, asr_model):
         if not str(filepath).endswith((".pkl", ".pickle")):
-            raise ValueError("SVMLangDetectHead only supports loading from .pkl/.pickle artifacts")
+            raise ValueError("SklearnLangDetectHead only supports loading from .pkl/.pickle artifacts")
         with open(filepath, "rb") as f:
             head = pickle.load(f)
         if not hasattr(head, "predict"):
-            raise ValueError("Loaded SVM head does not have a .predict method")
-        return SVMLangDetectHead(head)
+            raise ValueError("Loaded sklearn head does not have a .predict method")
+        return SklearnLangDetectHead(head)
 
     def _to_pooled_numpy(self, hidden):
         # Case 1: torch.Tensor from Whisper encoder hidden states (B, T, D) or pooled (B, D)
@@ -149,4 +149,13 @@ class SVMLangDetectHead(LangDetectHead):
         if pred.ndim != 1:
             pred = pred.reshape(-1)
         return pred.astype(int).tolist()
-        
+
+
+class SVMLangDetectHead(SklearnLangDetectHead):
+    """Backward-compatible alias for sklearn-based SVM heads."""
+
+    @staticmethod
+    def load(filepath, asr_model):
+        head = SklearnLangDetectHead.load(filepath, asr_model)
+        return SVMLangDetectHead(head.head)
+

@@ -9,7 +9,7 @@ import pytest
 from datasets import load_from_disk
 
 from cld.models.asr_model import ASRModel
-from cld.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead
+from cld.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead, SklearnLangDetectHead, SVMLangDetectHead
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -123,6 +123,15 @@ def _random_cvxnn_head_artifact(path: Path, dims: int, n_classes: int, seed: int
         pickle.dump(head, f)
 
 
+class _DummySklearnPredictor:
+    """Minimal sklearn-like predictor used for serialization tests."""
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        X = np.asarray(X, dtype=np.float32)
+        # Deterministic binary prediction from first feature.
+        return (X[:, 0] > 0.0).astype(np.int64)
+
+
 class _NaiveRandomWhisperHead:
     """Naive head for Whisper: expects hidden states shaped (B, T, D) (torch.Tensor)."""
 
@@ -149,6 +158,36 @@ class _NaiveRandomMMSHead:
             raise ValueError(f"Expected pooled (B, D), got {pooled.shape}")
         bsz = pooled.shape[0]
         return self.rng.integers(low=0, high=self.n_classes, size=(bsz,)).tolist()
+
+
+def test_sklearn_lang_detect_head_load_and_predict(tmp_path: Path):
+    artifact = tmp_path / "sklearn_head.pkl"
+    with open(artifact, "wb") as f:
+        pickle.dump(_DummySklearnPredictor(), f)
+
+    head = SklearnLangDetectHead.load(str(artifact), asr_model=None)
+
+    # Pooled numpy features
+    pooled = np.asarray([[1.0, 0.1], [-1.0, 0.2], [0.0, -0.4]], dtype=np.float32)
+    pred_np = head.predict(pooled)
+    assert pred_np == [1, 0, 0]
+
+    # Whisper-like hidden states (B, T, D)
+    torch = pytest.importorskip("torch")
+    hidden = torch.tensor([[[1.0, 0.1], [1.0, -0.2]], [[-1.0, 0.2], [-1.0, -0.3]]], dtype=torch.float32)
+    pred_torch = head.predict(hidden)
+    assert pred_torch == [1, 0]
+
+
+def test_svm_lang_detect_head_backward_compatible_load(tmp_path: Path):
+    artifact = tmp_path / "svm_head.pkl"
+    with open(artifact, "wb") as f:
+        pickle.dump(_DummySklearnPredictor(), f)
+
+    head = SVMLangDetectHead.load(str(artifact), asr_model=None)
+    assert isinstance(head, SVMLangDetectHead)
+    pred = head.predict(np.asarray([[0.5, 0.0], [-0.5, 0.0]], dtype=np.float32))
+    assert pred == [1, 0]
 
 
 @pytest.fixture(scope="session")

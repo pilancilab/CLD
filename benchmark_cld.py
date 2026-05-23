@@ -1,6 +1,6 @@
 import argparse
 from datasets import load_from_disk
-from cld import ASRModel, CVXNNLangDetectHead, NNLangDetectHead, SVMLangDetectHead
+from cld import ASRModel, CVXNNLangDetectHead, NNLangDetectHead, SklearnLangDetectHead, SVMLangDetectHead
 from sklearn.metrics import classification_report
 import evaluate
 import wandb
@@ -15,7 +15,7 @@ def parse_args():
         "--cld_type",
         type=str,
         default="nn",
-        choices=["nn", "cvx", "linear_svm", "vanilla"],
+        choices=["nn", "cvx", "linear_svm", "kernel_svm", "knn", "vanilla"],
         help="Detection head architecture.",
     )
     parser.add_argument("--languages", type=str, required=True, help="Comma-separated list of languages to evaluate on")
@@ -44,6 +44,8 @@ def main():
         lang_detect_head = CVXNNLangDetectHead.load(args.cld_path, asr_model)
     elif args.cld_type == 'linear_svm':
         lang_detect_head = SVMLangDetectHead.load(args.cld_path, asr_model)
+    elif args.cld_type in {'kernel_svm', 'knn'}:
+        lang_detect_head = SklearnLangDetectHead.load(args.cld_path, asr_model)
     asr_model.set_lang_detect_head(lang_detect_head)
 
     # Use test split consistently

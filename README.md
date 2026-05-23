@@ -28,11 +28,12 @@ This repository provides the official implementation of **CLD**, a lightweight l
 
 The paper PDF is available in [`paper/`](paper/) and the pip-installable package is published at [pypi.org/project/jaxcld](https://pypi.org/project/jaxcld/).
 
+![Table 5](assets/table_5.png)
 ![Approach overview](assets/fig_1_2.png)
 
 ## Highlights
 
-- High Accuracy: Excels in binary and multiclass language detection (Table 2).
+- High Accuracy: Excels in binary and multiclass language detection (Table 5).
 - Low-Resource Robustness: Effective with limited data (Figures 1 & 2).
 - Efficient: 13x training speedup from traditional NNs due to ADMM optimization and JAX.
 
@@ -291,31 +292,6 @@ _TBD._ This repo supports loading three head types:
 | CVXNN | `*_trained_cvx_mlp.pkl` | `CVXNNLangDetectHead.load(...)` |
 | NN | `*_nn_head.pkl` | `NNLangDetectHead.load(...)` |
 | Linear SVM | `*_linear_svm.pkl` | `SVMLangDetectHead.load(...)` | -->
-
-## Results
-
-Paper results (Table 5):
-
-![Table 5](assets/table_5.png)
-
-To reproduce the evaluation numbers for a given head, run `benchmark_cld.py` as shown in the Evaluation section.
-<!-- 
-## Tests
-
-```bash
-pytest -q
-```
-
-Note: tests are designed to **skip** if the local dataset at `data/test/final_dry/` is missing or if large model weights are unavailable.
-
-## Contributing
-
-- **Bugs / features**: please open an issue with a minimal reproduction.
-- **Pull requests**: keep changes focused, add/update tests when behavior changes, and document new scripts/flags in `README.md`.
-
-## License
-
-MIT (see `pyproject.toml`). -->
 
 ## Citation
 

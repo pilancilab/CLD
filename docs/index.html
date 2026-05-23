@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>CLD: Convex Low-resource Accent-Robust Language Detection in Speech Recognition</title>
+  <meta name="description" content="CLD: A lightweight convex language-detection module for multilingual ASR, optimized via ADMM in JAX.">
+  <meta name="keywords" content="CLD, Convex Language Detection, ASR, Whisper, MMS, ADMM, JAX, ICML 2026">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta property="og:title" content="CLD: Convex Low-resource Accent-Robust Language Detection in Speech Recognition">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="CLD: Convex Low-resource Accent-Robust Language Detection in Speech Recognition">
+  <meta property="og:image" content="static/images/figure_1.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:url" content="https://pilancilab.github.io/CLD/" />
+  <meta property="og:description" content="A lightweight convex language-detection module for multilingual ASR, optimized via ADMM in JAX." />
+  <meta name="twitter:title" content="CLD: Convex Low-resource Accent-Robust Language Detection in Speech Recognition" />
+  <meta name="twitter:description" content="A lightweight convex language-detection module for multilingual ASR, optimized via ADMM in JAX." />
+  <meta name="twitter:image" content="static/images/figure_1.png" />
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/images/CLD_logo.png">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+
+</head>
+
+<body>
+  <section class="hero">
+    <div class="hero-body" style="padding-bottom: 1rem;">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <div class="is-size-5 publication-venue has-text-centered" style="margin: 0.25rem auto 0.75rem;">
+              ICML 2026
+            </div>
+            <h1 class="title is-1 publication-title">
+              <span style="font-size:2.5rem;">CLD: Convex Low-resource Accent-Robust Language Detection in Speech Recognition</span>
+            </h1>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                Miria Feng<sup>1</sup>,
+              </span>
+              <span class="author-block">
+                William Tan<sup>2</sup>,
+              </span>
+              <span class="author-block">
+                Mert Pilanci<sup>1</sup>
+              </span>
+            </div>
+
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><sup>1</sup>Department of Electrical Engineering, Stanford University,</span>
+              <span class="author-block"><sup>2</sup>Department of Computer Science, Stanford University</span>
+            </div>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <!-- Paper Link -->
+                <span class="link-block">
+                  <a href="https://openreview.net/pdf?id=LezLGW8UFX" 
+                    class="external-link button is-normal is-rounded is-dark"> <!--TODO: change to archive link-->
+                    <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </span>
+                    <span>Paper</span>
+                  </a>
+                </span>
+                <!-- Code Link -->
+                <span class="link-block">
+                  <a href="https://github.com/pilancilab/CLD/"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+                <!-- Poster Link -->
+                <span class="link-block">
+                  <a href="https://icml.cc/media/PosterPDFs/ICML%202026/64615.png?t=1779413776.8937712"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-image"></i>
+                    </span>
+                    <span>Poster</span>
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Headline result -->
+  <section class="hero teaser" style="padding-top: 0;">
+    <div class="container is-max-desktop">
+      <div class="hero-body" style="padding-top: 0;">
+        <img src="static/images/table_3.png" alt="CLD headline results (Table 3)" />
+        <h2 class="subtitle has-text-centered">
+          <strong>CLD</strong> attaches a lightweight convex language-detection head to a frozen ASR encoder (<a href="https://github.com/openai/whisper">Whisper</a> / <a href="https://huggingface.co/facebook/mms-1b-all">MMS-1B</a>),
+          predicting the input language before decoding. Despite training in seconds on pooled encoder features,
+          it consistently matches or beats standard baselines for both language identification and downstream WER,
+          and is especially robust in <em>low-resource</em> and <em>accented</em> regimes.
+        </h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem statement / overview -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3">Overview</h2>
+          <div class="content has-text-justified">
+            <p>
+              Multilingual ASR systems such as Whisper rely on a language token to steer the decoder, and MMS-style
+              systems route audio through language-specific adapters. In both cases, an upstream <strong>language
+              identification (LID)</strong> step largely determines transcription quality. Off-the-shelf LID modules
+              degrade sharply on accented speech and low-resource languages, where labeled training data is scarce
+              and dialectal variation is high. Standard neural detection heads can close this gap, but require
+              extensive data, long training, and careful hyperparameter tuning.
+            </p>
+            <p>
+              We propose <strong>Convex Language Detection (CLD)</strong>: a tiny, convex two-layer detection head
+              that operates on pooled ASR encoder features and is trained globally and reproducibly via an
+              ADMM-based convex reformulation, implemented in JAX. CLD plugs into existing ASR pipelines with a few
+              lines of code and produces a calibrated language prediction in a single forward pass, which is then
+              used as the Whisper language token or the MMS adapter id.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Model section -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3">The CLD Model</h2>
+          <div class="content has-text-justified">
+            <img src="static/images/figure_1.png" alt="CLD model diagram" />
+            <p>
+              CLD slots a tiny convex two-layer network between a frozen ASR encoder and its decoder. At training
+              time, we mean-pool the encoder's hidden states into one utterance vector per clip and fit a convex
+              reformulation of the detection head with ADMM in JAX. Our formulation ensures a single batched, multi-GPU solve that
+              converges to a global optimum without backprop, learning-rate schedules, or hyperparameter sweeps.
+            </p>
+            <p>
+              At inference, the same pooling + one lightweight forward pass turns each waveform into a predicted
+              language token in well under 500&nbsp;ms. For Whisper, that token becomes the decoder's
+              start-of-transcript language tag; for MMS, it selects the language-specific adapter. The downstream
+              ASR pipeline is otherwise untouched, so CLD drops in as a few lines of code while making
+              transcription noticeably more robust to accent and low-resource conditions.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Experiments -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3">Further Experiments</h2>
+
+          <h3 class="title is-4">Sample efficiency in low-resource regimes</h3>
+          <div class="content has-text-justified">
+            <img src="static/images/fig_1_2.png" alt="Sample efficiency (Figures 1 & 2)" />
+            <p>
+              We evaluate CLD against neural and kernel-based detection heads as the per-class training budget is
+              swept from 100 to 10,000 utterances, with a fixed held-out test set. The NN, KNN, and SVM baselines
+               improve only as the training budget grows, reflecting
+              the data demands of traditional head tuning. CLD's accuracy, by contrast, is essentially invariant
+              to dataset size: detection accuracy ranges from <strong>96.94%</strong> at 10,000 samples to
+              <strong>99.14%</strong> at 1,000 samples, while WER reaches <strong>21.62</strong>, the lowest among
+              all evaluated systems. These results indicate that CLD recovers near-saturation performance with two
+              orders of magnitude less labeled audio than the neural baselines.
+            </p>
+          </div>
+
+          <br>
+          <h3 class="title is-4">Training efficiency under JAX-ADMM</h3>
+          <div class="content has-text-justified">
+            <img src="static/images/table_1.png" alt="Training efficiency (Table 1)" style="width: 50%; height: auto; display: block; margin: 0 auto;" />
+            <p>
+              CLD's convex reformulation admits a unique global optimum and is solved with a single ADMM run in
+              JAX, removing the need for learning-rate scheduling or hyperparameter search. End-to-end training
+              completes in approximately <strong>64 seconds</strong> and consumes roughly
+              <strong>13&times; fewer TFLOPs</strong> than the vanilla NN baseline (not including hyperparameter search), while attaining 
+              superior accuracy. This reproducibility and low compute footprint make CLD practical for rapid
+              iteration on new language pairs and datasets.
+            </p>
+          </div>
+
+          <br>
+          <h3 class="title is-4">Robustness across dialects and accents</h3>
+          <div class="content has-text-justified">
+            <img src="static/images/table_2.png" alt="Dialectical robustness (Table 2)" />
+            <p>
+              At a constrained 500-sample training budget, the NN head exhibits a strong English bias inherited
+              from the Whisper feature space: it attains 100% on selected English accents but misclassifies
+              <strong>88.88%</strong> of Chinese samples as English, with per-dialect accuracy collapsing to
+              <strong>8.78%</strong> on Mainland Chinese and <strong>8.84%</strong> on Taiwanese Mandarin. This
+              illustrates a well-known failure mode of fine-tuning on imbalanced pretraining representations.
+            </p>
+            <p>
+              CLD exhibits substantially flatter performance across dialects. It exceeds <strong>94%</strong>
+              accuracy on every tested accent and reaches <strong>88.73%</strong> on Min Dong Chinese, a dialect
+              on which vanilla Whisper and the fine-tuned NN achieve only 9.86% and 25.35% respectively. The
+              uniformity and low variance across dialects suggest that CLD is a robust choice for deploying ASR in
+              accent-diverse, low-resource conditions.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quickstart -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3">Quickstart</h2>
+          <div class="content">
+            <p>Install the package from PyPI:</p>
+            <pre><code>pip install jaxcld</code></pre>
+            <p>Attach a CLD head to a Whisper model and run inference:</p>
+            <pre><code>import numpy as np
+from cld import ASRModel, CVXNNLangDetectHead
+
+languages = ["en", "hi", "id", "ms", "zh"]
+asr = ASRModel.from_pretrained("openai/whisper-small", config={"languages": languages})
+
+head = CVXNNLangDetectHead.load("path/to/whisper-small_trained_cvx_mlp.pkl", asr)
+asr.set_lang_detect_head(head)
+
+audio_16k_mono: np.ndarray = ...  # shape (T,), 16 kHz mono
+pred_langs, pred_texts = asr.predict(audio_16k_mono)
+print(pred_langs[0], pred_texts[0])</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BibTeX -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>@inproceedings{feng2026cld,
+  title     = {Convex Low-resource Accent-Robust Language Detection in Speech Recognition},
+  author    = {Feng, Miria and Tan, William and Pilanci, Mert},
+  booktitle = {Proceedings of the 43rd International Conference on Machine Learning},
+  year      = {2026},
+  series    = {Proceedings of Machine Learning Research},
+  publisher = {PMLR},
+  url       = {https://icml.cc/virtual/2026/poster/64615}
+}</code></pre>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+            <p>
+              Website template borrowed from
+              <a href="https://github.com/nerfies/nerfies.github.io">NeRFies</a> under a
+              <a href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International</a> license.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+
+</html>

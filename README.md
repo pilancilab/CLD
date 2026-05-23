@@ -28,12 +28,12 @@ This repository provides the official implementation of **CLD**, a lightweight l
 
 The paper PDF is available in [`paper/`](paper/) and the pip-installable package is published at [pypi.org/project/jaxcld](https://pypi.org/project/jaxcld/).
 
-![Table 5](assets/table_5.png)
+![Table 3](assets/table_3.png)
 ![Approach overview](assets/fig_1_2.png)
 
 ## Highlights
 
-- High Accuracy: Excels in binary and multiclass language detection (Table 5).
+- High Accuracy: Excels in binary and multiclass language detection (Table 3).
 - Low-Resource Robustness: Effective with limited data (Figures 1 & 2).
 - Efficient: 13x training speedup from traditional NNs due to ADMM optimization and JAX.
 

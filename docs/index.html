@@ -186,14 +186,13 @@
           <div class="content has-text-justified">
             <img src="static/images/fig_1_2.png" alt="Sample efficiency (Figures 1 & 2)" />
             <p>
-              We evaluate CLD against neural and kernel-based detection heads as the per-class training budget is
-              swept from 100 to 10,000 utterances, with a fixed held-out test set. The NN, KNN, and SVM baselines
+              We evaluate CLD against traditional vanilla neural networks heads as the per-class training budget consumes
+              100 to 10,000 utterances per class, with a fixed held-out test set. The NN, and fine-tuned whisper-small baselines
                improve only as the training budget grows, reflecting
-              the data demands of traditional head tuning. CLD's accuracy, by contrast, is essentially invariant
+              the data demands of traditional LID tuning. CLD's accuracy, by contrast, is essentially invariant
               to dataset size: detection accuracy ranges from <strong>96.94%</strong> at 10,000 samples to
-              <strong>99.14%</strong> at 1,000 samples, while WER reaches <strong>21.62</strong>, the lowest among
-              all evaluated systems. These results indicate that CLD recovers near-saturation performance with two
-              orders of magnitude less labeled audio than the neural baselines.
+              <strong>99.14%</strong> at 1,000 samples, with CLD achieving <strong>98.33%</strong> accuracy and <strong>35.95</strong> WER at only 100 samples per class. These results indicate that CLD recovers near-saturation performance with two
+              orders of magnitude less labeled audio than the neural baselines. 
             </p>
           </div>
 

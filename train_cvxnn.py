@@ -65,8 +65,15 @@ def run(model_name, dataset_path, cronos_params, adamW_params, opt_seed, data_se
     # Load the training and test data
     print(f"Loading data from {dataset_path} for languages {languages}...")
     asr_model = ASRModel.from_pretrained(model_name, config={"languages": languages})
-    Atr, ytr = asr_model.load_data(dataset_path, data_seed=data_seed, caller_script="defrun", dataset_split="train")
-    Atst, ytst = asr_model.load_data(dataset_path, data_seed=data_seed, caller_script="defrun", dataset_split="valid")
+
+    def _load_split(split):
+        # Some backends (e.g. MMS) return (A, y, n_classes); Whisper returns (A, y).
+        out = asr_model.load_data(dataset_path, data_seed=data_seed, caller_script="defrun", dataset_split=split)
+        A, y = out[0], out[1]
+        return A, y
+
+    Atr, ytr = _load_split("train")
+    Atst, ytst = _load_split("valid")
     
     ##### CRONOS #####
     # Number of neurons in the convex network (mapped from 'rank' parameter if P_S not set)

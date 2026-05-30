@@ -89,7 +89,16 @@ class CVXNNLangDetectHead(LangDetectHead):
         return CVXNNLangDetectHead(head)
     
     def predict(self, hidden):
-        pooled = hidden.mean(dim=1).cpu().detach().numpy()  # Move to CPU and numpy for predict
+        # `hidden` may be a raw encoder tensor (B, T, D) from Whisper, or an
+        # already-pooled numpy array (B, D) from the MMS callsite in asr_model.
+        if isinstance(hidden, torch.Tensor):
+            if hidden.ndim == 3:
+                hidden = hidden.mean(dim=1)
+            pooled = hidden.detach().to("cpu").float().numpy()
+        else:
+            pooled = np.asarray(hidden, dtype=np.float32)
+            if pooled.ndim == 3:
+                pooled = pooled.mean(axis=1)
         # theta1/theta2 stored by ADMM are batched per-class weights:
         # - theta1: (C, d, m)
         # - theta2: (C, m)

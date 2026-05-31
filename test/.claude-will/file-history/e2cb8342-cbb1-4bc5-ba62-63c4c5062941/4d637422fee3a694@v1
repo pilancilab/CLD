@@ -1,0 +1,367 @@
+#!/usr/bin/env python
+"""Publish the three 5-language CLD convex language-detection heads to the HF Hub.
+
+Creates (or updates) one public model repo per backbone under the authenticated
+user, uploads the trained ``*_trained_cvx_mlp.pkl`` artifact, a generated model
+card (README.md), and the paper's comparison table image.
+
+Auth: uses the ambient token from ``hf auth login`` (no token is hardcoded).
+Idempotent: safe to re-run (``exist_ok=True``).
+
+    python scripts/push_models_to_hf.py            # push all three
+    python scripts/push_models_to_hf.py --dry-run  # write cards locally, skip upload
+"""
+import argparse
+import os
+import textwrap
+
+from huggingface_hub import HfApi
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NAMESPACE = "williamhtan"
+LANGUAGES = ["en", "hi", "id", "ms", "zh"]
+LANG_NAMES = {
+    "en": "English",
+    "hi": "Hindi",
+    "id": "Indonesian",
+    "ms": "Malay",
+    "zh": "Mandarin Chinese",
+}
+
+# Paper Table 3 — full baseline comparison (WSP = whisper-small, WSP-L =
+# whisper-large-v3, MMS = mms-1b-all). Order: Default, KNN, Linear SVM,
+# Kernel SVM, NN, CLD (ours).
+TABLE = {
+    "Detection Accuracy": [
+        ("Default",     "0.7154", "0.8033", "0.6701"),
+        ("KNN",         "0.6123", "0.7145", "0.4981"),
+        ("Linear SVM",  "0.9392", "0.9501", "0.5653"),
+        ("Kernel SVM",  "0.9431", "0.9582", "0.5701"),
+        ("NN",          "0.7737", "0.9605", "0.8612"),
+        ("**CLD (ours)**", "**0.9715**", "**0.9806**", "**0.9702**"),
+    ],
+    "WER (↓)": [
+        ("Default",     "139.37", "40.41", "51.88"),
+        ("KNN",         "145.21", "44.89", "57.34"),
+        ("Linear SVM",  "48.74",  "39.36", "50.73"),
+        ("Kernel SVM",  "46.52",  "37.91", "49.12"),
+        ("NN",          "53.84",  "29.25", "48.26"),
+        ("**CLD (ours)**", "**31.74**", "**28.60**", "**45.27**"),
+    ],
+    "CER (↓)": [
+        ("Default",     "73.85", "21.80", "27.61"),
+        ("KNN",         "81.05", "29.12", "32.76"),
+        ("Linear SVM",  "28.28", "23.68", "26.07"),
+        ("Kernel SVM",  "26.14", "22.05", "25.88"),
+        ("NN",          "34.52", "15.99", "23.64"),
+        ("**CLD (ours)**", "**17.84**", "**15.37**", "**21.58**"),
+    ],
+}
+
+# Per-backbone artifact facts. `col` is the column index in TABLE rows for this
+# backbone (0-based over the three value columns).
+MODELS = [
+    {
+        "repo": "cld-whisper-small-5lang",
+        "base": "openai/whisper-small",
+        "base_tag": "whisper",
+        "pkl": "data/cld-whisper-small-5lang/openai/whisper-small/openai_whisper-small_trained_cvx_mlp.pkl",
+        "pkl_name": "openai_whisper-small_trained_cvx_mlp.pkl",
+        "loader": "CVXNNLangDetectHead",
+        "dim": 768,
+        "theta1": "(5, 768, 128)",
+        "col": 0,
+        "col_label": "WSP",
+        "data_seed": 6,
+        "val_acc": "0.9799",
+        "train_acc": "0.9805",
+        "train_time": "257.8",
+        "tflops": "59,542",
+        "paper_acc": "0.9715",
+        "paper_wer": "31.74",
+        "paper_cer": "17.84",
+    },
+    {
+        "repo": "cld-whisper-large-v3-5lang",
+        "base": "openai/whisper-large-v3",
+        "base_tag": "whisper",
+        "pkl": "data/cld-whisper-large-v3-5lang/openai/whisper-large-v3/openai_whisper-large-v3_trained_cvx_mlp.pkl",
+        "pkl_name": "openai_whisper-large-v3_trained_cvx_mlp.pkl",
+        "loader": "CVXNNLangDetectHead",
+        "dim": 1280,
+        "theta1": "(5, 1280, 128)",
+        "col": 1,
+        "col_label": "WSP-L",
+        "data_seed": 2,
+        "val_acc": "0.9845",
+        "train_acc": "0.9832",
+        "train_time": "454.2",
+        "tflops": "104,931",
+        "paper_acc": "0.9806",
+        "paper_wer": "28.60",
+        "paper_cer": "15.37",
+    },
+    {
+        "repo": "cld-mms-1b-5lang",
+        "base": "facebook/mms-1b-all",
+        "base_tag": "mms",
+        "pkl": "data/cld-mms-1b-5lang/facebook/mms-1b-all/facebook_mms-1b-all_trained_cvx_mlp.pkl",
+        "pkl_name": "facebook_mms-1b-all_trained_cvx_mlp.pkl",
+        "loader": "CVXNNLangDetectHead",
+        "dim": 1280,
+        "theta1": "(5, 1280, 128)",
+        "col": 2,
+        "col_label": "MMS-1B",
+        "data_seed": 7,
+        "val_acc": "0.9825",
+        "train_acc": "0.9981",
+        "train_time": "572.5",
+        "tflops": "132,247",
+        "paper_acc": "0.9702",
+        "paper_wer": "45.27",
+        "paper_cer": "21.58",
+    },
+]
+
+TABLE_IMG = "assets/table_3.png"
+
+
+def render_table(highlight_col):
+    """Render the three comparison sub-tables as Markdown, marking the column
+    that corresponds to the current model's backbone."""
+    headers = ["WSP", "WSP-L", "MMS-1B"]
+    out = []
+    for metric, rows in TABLE.items():
+        cols = list(headers)
+        cols[highlight_col] = f"{cols[highlight_col]} ← this model"
+        out.append(f"**{metric}**\n")
+        out.append("| Language Classifier | " + " | ".join(cols) + " |")
+        out.append("|" + "---|" * 4)
+        for name, *vals in rows:
+            out.append(f"| {name} | " + " | ".join(vals) + " |")
+        out.append("")
+    return "\n".join(out)
+
+
+def build_card(m):
+    fm = textwrap.dedent(f"""\
+    ---
+    license: mit
+    language:
+    - en
+    - hi
+    - id
+    - ms
+    - zh
+    pipeline_tag: audio-classification
+    library_name: jaxcld
+    base_model: {m['base']}
+    tags:
+    - language-identification
+    - language-detection
+    - spoken-language-identification
+    - speech
+    - automatic-speech-recognition
+    - {m['base_tag']}
+    - convex-optimization
+    - jax
+    - admm
+    - cronos
+    - low-resource
+    - accent-robust
+    metrics:
+    - accuracy
+    - wer
+    - cer
+    ---
+    """)
+
+    langs_list = "\n".join(f"  - `{c}` — {LANG_NAMES[c]}" for c in LANGUAGES)
+    idx_map = ", ".join(f"`{i}`→`{c}`" for i, c in enumerate(LANGUAGES))
+    comparison = render_table(m["col"])
+
+    body = f"""\
+# CLD — Convex Language-Detection Head for `{m['base']}` (5 languages)
+
+**Convex Low-resource Accent-Robust Language Detection (CLD)** head for multilingual
+speech recognition. This artifact is a lightweight **convex ReLU-MLP** spoken-language
+classifier trained on **frozen pooled encoder embeddings** from
+[`{m['base']}`](https://huggingface.co/{m['base']}). At inference it predicts the spoken
+language and selects the corresponding {"Whisper language token" if m['base_tag'] == 'whisper' else "MMS language adapter"}
+before decoding, improving downstream transcription accuracy.
+
+[![paper](https://img.shields.io/badge/paper-ICML%202026-blue.svg)](https://icml.cc/virtual/2026/poster/64615)
+[![code](https://img.shields.io/badge/code-GitHub-181717.svg?logo=github)](https://github.com/pilancilab/CLD)
+[![pypi](https://img.shields.io/badge/pip-jaxcld-3775A9.svg?logo=pypi&logoColor=white)](https://pypi.org/project/jaxcld/)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/pilancilab/CLD)
+
+## Model description
+
+CLD attaches a small language-detection head to the (frozen) encoder of a pre-trained
+ASR model and uses it to pick the language before decoding. Instead of a standard neural
+network, the head is a **two-layer convex ReLU MLP** trained by solving a convex
+reformulation with **CRONOS** — an ADMM solver (with preconditioned conjugate gradient /
+Nyström preconditioning) implemented in **JAX**. This yields a **~13× training speedup**
+over a standard NN head while matching or exceeding its accuracy, and is especially strong
+in **low-resource** and **accent-diverse** regimes.
+
+- **Backbone (frozen):** `{m['base']}`
+- **Task:** spoken-language identification (5-way) → ASR language selection
+- **Languages (5):**
+{langs_list}
+- **Class index → language:** {idx_map} (labels are the sorted ISO-639-1 codes)
+
+## How it works
+
+The head consumes **mean-pooled** encoder hidden states `X ∈ ℝ^(B×{m['dim']})`
+(pooled over the time dimension) and computes, per class, `logits = relu(X @ W1) @ W2`,
+then takes the `argmax`. The pickle stores a `CVX_ReLU_MLP` object whose key tensors are:
+
+| Tensor | Shape | Role |
+|---|---|---|
+| `theta1` | `{m['theta1']}` | first-layer (ReLU) weights, per class |
+| `theta2` | `(5, 128)` | output-layer weights, per class |
+
+Configuration: `n_classes = 5`, `P_S = 64` hyperplane samples (→ 128 ReLU units),
+input dim `{m['dim']}`.
+
+## Intended uses & limitations
+
+- **Use:** drop-in language detector for `{m['base']}` over the 5 languages above; pair
+  with the **matching frozen base encoder** (embeddings are backbone-specific — a head is
+  not transferable across backbones or to other languages).
+- **Not** a standalone audio model: it is a head that runs on top of `{m['base']}`.
+- Trained on Common Voice accents; strong but not unlimited generalization to unseen
+  accents/domains. Extending the language set requires retraining.
+
+## Training data
+
+Pooled encoder embeddings derived from **Mozilla Common Voice** audio, accent-stratified
+across the five languages (see the data recipe and `configs/` in the
+[GitHub repo](https://github.com/pilancilab/CLD)). The convex head was fit on
+~12,368 training / ~1,546 validation pooled embeddings extracted from the frozen
+`{m['base']}` encoder.
+
+## Training procedure
+
+Trained with `train_cvxnn.py` (CRONOS / ADMM in JAX). Hyperparameters shared across all
+three released backbones:
+
+| rank | neurons | beta | rho | gamma_ratio | admm_iters | pcg_iters | opt_seed |
+|---|---|---|---|---|---|---|---|
+| 20 | 64 | 0.001 | 0.1 | 1 | 6 | 32 | 1024 |
+
+This model: `data_seed = {m['data_seed']}`, training time ≈ **{m['train_time']} s**,
+estimated **{m['tflops']} TFLOPs**. (AdamW comparison config used elsewhere in the paper:
+`gamma=1e-4, n_epoch=30, batch_size=1024`.)
+
+## Evaluation
+
+### Headline results (paper, Table 3)
+
+For this backbone, CLD achieves **Detection Accuracy {m['paper_acc']}**,
+**WER {m['paper_wer']}**, **CER {m['paper_cer']}**. Full comparison against baseline
+language classifiers (Default = backbone's built-in LID, KNN, Linear SVM, Kernel SVM, NN)
+across all three backbones:
+
+{comparison}
+
+![Table 3 — comparison](table_3.png)
+
+### This artifact's own validation accuracy
+
+Measured during training on the held-out validation split:
+**detection accuracy = {m['val_acc']}** (train-split peak {m['train_acc']}).
+
+## How to use
+
+The head is loaded and run through the [`jaxcld`](https://pypi.org/project/jaxcld/)
+package. Loading the artifact requires JAX (the weights are JAX arrays):
+
+```bash
+pip install jaxcld jax
+```
+
+```python
+import numpy as np
+from huggingface_hub import hf_hub_download
+from cld import ASRModel, CVXNNLangDetectHead
+
+languages = ["en", "hi", "id", "ms", "zh"]
+
+# 1) Load the frozen base ASR model
+asr = ASRModel.from_pretrained("{m['base']}", config={{"languages": languages}})
+
+# 2) Download + load this convex language-detection head
+head_path = hf_hub_download("{NAMESPACE}/{m['repo']}", "{m['pkl_name']}")
+head = {m['loader']}.load(head_path, asr)
+
+# 3) Attach and run
+asr.set_lang_detect_head(head)
+audio_16k_mono: np.ndarray = ...   # shape (T,), 16 kHz mono
+pred_langs, pred_texts = asr.predict(audio_16k_mono)
+print(pred_langs[0], pred_texts[0])
+```
+
+## Citation
+
+```bibtex
+@inproceedings{{feng2026cld,
+  title     = {{Convex Low-resource Accent-Robust Language Detection in Speech Recognition}},
+  author    = {{Feng, Miria and Tan, William and Pilanci, Mert}},
+  booktitle = {{Proceedings of the 43rd International Conference on Machine Learning}},
+  year      = {{2026}},
+  series    = {{Proceedings of Machine Learning Research}},
+  publisher = {{PMLR}},
+  url       = {{https://icml.cc/virtual/2026/poster/64615}}
+}}
+```
+
+## License
+
+MIT — see the [CLD repository](https://github.com/pilancilab/CLD).
+"""
+    return fm + "\n" + body
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dry-run", action="store_true",
+                    help="Write cards to data/hf_upload/ but do not create/upload to the Hub.")
+    args = ap.parse_args()
+
+    api = HfApi()
+    stage = os.path.join(ROOT, "data", "hf_upload")
+    os.makedirs(stage, exist_ok=True)
+    table_img_path = os.path.join(ROOT, TABLE_IMG)
+
+    for m in MODELS:
+        repo_id = f"{NAMESPACE}/{m['repo']}"
+        card = build_card(m)
+        card_dir = os.path.join(stage, m["repo"])
+        os.makedirs(card_dir, exist_ok=True)
+        card_path = os.path.join(card_dir, "README.md")
+        with open(card_path, "w") as f:
+            f.write(card)
+        print(f"[card] wrote {card_path} ({len(card)} chars)")
+
+        pkl_path = os.path.join(ROOT, m["pkl"])
+        assert os.path.isfile(pkl_path), f"missing pkl: {pkl_path}"
+
+        if args.dry_run:
+            print(f"[dry-run] would push {repo_id}: {m['pkl_name']} + README.md + table_3.png")
+            continue
+
+        api.create_repo(repo_id=repo_id, repo_type="model", private=False, exist_ok=True)
+        api.upload_file(path_or_fileobj=card_path, path_in_repo="README.md",
+                        repo_id=repo_id, repo_type="model")
+        api.upload_file(path_or_fileobj=pkl_path, path_in_repo=m["pkl_name"],
+                        repo_id=repo_id, repo_type="model")
+        if os.path.isfile(table_img_path):
+            api.upload_file(path_or_fileobj=table_img_path, path_in_repo="table_3.png",
+                            repo_id=repo_id, repo_type="model")
+        print(f"[done] https://huggingface.co/{repo_id}")
+
+
+if __name__ == "__main__":
+    main()

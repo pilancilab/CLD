@@ -8,7 +8,7 @@ from typing import List, NamedTuple, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from cld.models.asr_model import ASRModel
+from jaxcld.models.asr_model import ASRModel
 
 
 class RunResults(NamedTuple):

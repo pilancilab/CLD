@@ -1,9 +1,9 @@
 """
-`cld` package public API.
+`jaxcld` package public API.
 
 The goal is to support:
 
-from cld import ASRModel, CVXNNLangDetectHead
+from jaxcld import ASRModel, CVXNNLangDetectHead
 """
 
 from __future__ import annotations
@@ -20,8 +20,8 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    # Lazy imports so `import cld` works even if optional heavy deps (torch, transformers)
-    # are not installed, while still supporting `from cld import ASRModel, ...` when they are.
+    # Lazy imports so `import jaxcld` works even if optional heavy deps (torch, transformers)
+    # are not installed, while still supporting `from jaxcld import ASRModel, ...` when they are.
     try:
         if name == "ASRModel":
             from .models.asr_model import ASRModel

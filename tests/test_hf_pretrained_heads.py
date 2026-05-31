@@ -5,7 +5,7 @@ Validates the exact usage snippet shown on the model cards
 
     import numpy as np
     from huggingface_hub import hf_hub_download
-    from cld import ASRModel, CVXNNLangDetectHead
+    from jaxcld import ASRModel, CVXNNLangDetectHead
 
     asr = ASRModel.from_pretrained(base_model, config={"languages": languages})
     head_path = hf_hub_download(repo_id, filename)
@@ -66,7 +66,7 @@ def test_model_card_imports_resolve():
     """The imports at the top of the model-card snippet must all resolve."""
     import numpy as _np  # noqa: F401
     from huggingface_hub import hf_hub_download
-    from cld import ASRModel, CVXNNLangDetectHead
+    from jaxcld import ASRModel, CVXNNLangDetectHead
 
     assert callable(hf_hub_download)
     assert hasattr(ASRModel, "from_pretrained")
@@ -82,7 +82,7 @@ def test_published_head_downloads_loads_and_predicts(repo_id, filename, base_mod
     ``hf_hub_download`` -> ``CVXNNLangDetectHead.load`` -> ``head.predict``.
     """
     pytest.importorskip("jax")  # artifacts store JAX arrays; loading needs jax
-    from cld import CVXNNLangDetectHead
+    from jaxcld import CVXNNLangDetectHead
 
     path = _download_head(repo_id, filename)
 
@@ -113,7 +113,7 @@ def test_model_card_snippet_end_to_end(repo_id, filename, base_model, dim):
     if os.environ.get("CLD_RUN_HF_SNIPPET_E2E") != "1":
         pytest.skip("Set CLD_RUN_HF_SNIPPET_E2E=1 to run the full end-to-end snippet test.")
     pytest.importorskip("jax")
-    from cld import ASRModel, CVXNNLangDetectHead
+    from jaxcld import ASRModel, CVXNNLangDetectHead
 
     try:
         asr = ASRModel.from_pretrained(base_model, config={"languages": LANGUAGES})
@@ -160,7 +160,7 @@ def test_mms_masked_pooling_is_invariant_to_batch_padding():
     if os.environ.get("CLD_RUN_HF_SNIPPET_E2E") != "1":
         pytest.skip("Set CLD_RUN_HF_SNIPPET_E2E=1 to run the MMS batch-padding invariance test.")
     pytest.importorskip("jax")
-    from cld import ASRModel, CVXNNLangDetectHead
+    from jaxcld import ASRModel, CVXNNLangDetectHead
 
     # Pick the published MMS head (the fix is MMS-specific).
     try:

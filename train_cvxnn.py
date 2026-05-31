@@ -12,9 +12,9 @@ import pandas as pd
 import wandb
 
 # Helper imports (Ensure these modules are in your python path)
-from cld.models.asr_model import ASRModel
-from cld.models.cvx_relu_mlp import CVX_ReLU_MLP
-from cld.optimizers.admm import admm
+from jaxcld.models.asr_model import ASRModel
+from jaxcld.models.cvx_relu_mlp import CVX_ReLU_MLP
+from jaxcld.optimizers.admm import admm
 
 # -----------------------------------------------------------------------------
 # Data Structures

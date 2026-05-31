@@ -3,10 +3,10 @@
 Train a small NN language detection head on top of pooled ASR embeddings.
 
 This script trains on the **pooled encoder embeddings** returned by:
-  `cld.models.asr_model.ASRModel.load_data()`  -> (N, D) embeddings, (N,) labels
+  `jaxcld.models.asr_model.ASRModel.load_data()`  -> (N, D) embeddings, (N,) labels
 
 It produces an artifact compatible with:
-  `cld.models.lang_detect_head.NNLangDetectHead.load()`
+  `jaxcld.models.lang_detect_head.NNLangDetectHead.load()`
 
 Example:
   python train_nn.py \
@@ -29,8 +29,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from cld.models.asr_model import ASRModel
-from cld.models.lang_detect_head import NNLangDetectHeadModule
+from jaxcld.models.asr_model import ASRModel
+from jaxcld.models.lang_detect_head import NNLangDetectHeadModule
 
 
 def parse_args():

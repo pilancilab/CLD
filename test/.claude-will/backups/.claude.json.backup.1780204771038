@@ -1,0 +1,24 @@
+{
+  "firstStartTime": "2026-05-31T05:04:40.083Z",
+  "opusProMigrationComplete": true,
+  "opusProMigrationTimestamp": 1780203880137,
+  "sonnet1m45MigrationComplete": true,
+  "seenNotifications": {},
+  "migrationVersion": 13,
+  "userID": "b8f27cd0021c7f063a18e281c762b7edc18e7f7558d3e33b07968e0442157edf",
+  "changelogLastFetched": 1780203880278,
+  "oauthAccount": {
+    "accountUuid": "dcc0aa76-4c74-4356-9ebb-a4eb7023da14",
+    "emailAddress": "william@tan.id",
+    "organizationUuid": "9979cafa-16a5-47a8-91be-fe2580345c26",
+    "hasExtraUsageEnabled": false,
+    "billingType": "stripe_subscription",
+    "accountCreatedAt": "2024-03-07T05:38:34.334109Z",
+    "subscriptionCreatedAt": "2026-03-25T21:01:59.115562Z",
+    "ccOnboardingFlags": {},
+    "claudeCodeTrialEndsAt": null,
+    "claudeCodeTrialDurationDays": null,
+    "seatTier": null,
+    "displayName": "William"
+  }
+}

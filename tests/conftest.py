@@ -4,7 +4,7 @@ Pytest configuration.
 Even though this repo is now packaged (has `pyproject.toml`), tests are often run
 directly from a source checkout without installing the package first. When tests
 are run from inside `tests/` (or any other cwd that isn't the repo root),
-`import cld` can fail unless the project root is on `sys.path`.
+`import jaxcld` can fail unless the project root is on `sys.path`.
 """
 
 from __future__ import annotations

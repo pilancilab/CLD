@@ -8,8 +8,8 @@ import pytest
 
 from datasets import load_from_disk
 
-from cld.models.asr_model import ASRModel
-from cld.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead, SklearnLangDetectHead, SVMLangDetectHead
+from jaxcld.models.asr_model import ASRModel
+from jaxcld.models.lang_detect_head import CVXNNLangDetectHead, NNLangDetectHead, SklearnLangDetectHead, SVMLangDetectHead
 
 
 ROOT = Path(__file__).resolve().parents[1]

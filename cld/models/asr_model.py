@@ -33,6 +33,7 @@ ISO3_TO_ISO2 = {
     "nan": "zh",
     "wuu": "zh",
     "yue": "zh",
+    "zho": "zh",
     "eng": "en",
     "hin": "hi",
     "zlm": "ms",
@@ -365,7 +366,7 @@ class MMS(ASRModel):
             with torch.no_grad():
                 encoder_outputs = self.model.wav2vec2(inputs.input_values, output_hidden_states=True)
                 hidden = encoder_outputs.last_hidden_state.squeeze(0)  # (seq_len, 768)
-            
+
             # Pool: Mean over seq_len
             pooled = hidden.mean(0).cpu().numpy()  # (768,)
             return pooled
@@ -426,11 +427,31 @@ class MMS(ASRModel):
 
         # 1. Detect language(s)
         if self.head:
-            # Run frozen encoder to get hidden states for the head
+            # Run frozen encoder to get hidden states for the head.
+            # NOTE: this batch is zero-padded to the longest clip ("padding=longest").
+            # Training (load_data) pools each clip individually over real frames only,
+            # so we must mask out padded frames here too -- otherwise the padding
+            # dilutes the mean pool and the head sees out-of-distribution features
+            # (this is why benchmark acc was ~0.85 while the head trains to ~0.98).
+            attention_mask = inputs.get("attention_mask")
             with torch.no_grad():
-                encoder_out = self.model.wav2vec2(input_values, output_hidden_states=True)
-                hidden = encoder_out.last_hidden_state  # (B, T, D)
-                pooled = hidden.mean(dim=1).cpu().numpy()  # (B, D) → numpy for sklearn heads
+                if attention_mask is not None:
+                    attention_mask = attention_mask.to(self.device)
+                    encoder_out = self.model.wav2vec2(
+                        input_values, attention_mask=attention_mask, output_hidden_states=True
+                    )
+                    hidden = encoder_out.last_hidden_state  # (B, T, D)
+                    # Map the waveform-level mask onto the encoder's downsampled frame grid.
+                    feat_lengths = self.model._get_feat_extract_output_lengths(
+                        attention_mask.sum(-1)
+                    ).long()
+                    frame_idx = torch.arange(hidden.shape[1], device=self.device)
+                    frame_mask = (frame_idx[None, :] < feat_lengths[:, None]).unsqueeze(-1).to(hidden.dtype)
+                    pooled = (hidden * frame_mask).sum(dim=1) / frame_mask.sum(dim=1).clamp(min=1.0)
+                else:
+                    encoder_out = self.model.wav2vec2(input_values, output_hidden_states=True)
+                    pooled = encoder_out.last_hidden_state.mean(dim=1)  # (B, D)
+                pooled = pooled.float().cpu().numpy()  # → numpy for sklearn/jax heads
                 class_ids = self.head.predict(pooled)  # assume returns np.array of shape (B,)
             detected_langs = [self.class_names[cid] for cid in class_ids]
         else:

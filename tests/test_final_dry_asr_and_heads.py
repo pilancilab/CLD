@@ -100,24 +100,30 @@ def _random_nn_head_artifact(path: Path, dims: int, n_classes: int, seed: int = 
 class _RandomCVXHead:
     """
     Minimal object to satisfy `CVXNNLangDetectHead.predict()`, which calls:
-      head.predict(pooled, head.theta1, head.theta2)
+      head.stacked_predict(pooled, head.theta1, head.theta2)
+    where theta1: (C, d, m) and theta2: (C, m) are per-class stacked weights.
     """
 
     def __init__(self, theta1: np.ndarray, theta2: np.ndarray):
         self.theta1 = theta1
         self.theta2 = theta2
 
-    def predict(self, X: np.ndarray, theta1: np.ndarray, theta2: np.ndarray) -> np.ndarray:
+    def stacked_predict(self, X: np.ndarray, theta1: np.ndarray, theta2: np.ndarray) -> np.ndarray:
+        # theta1: (C, d, m), theta2: (C, m) -> returns (B, C)
         X = np.asarray(X, dtype=np.float32)
-        Z = X @ np.asarray(theta1, dtype=np.float32)
-        Z = np.maximum(Z, 0.0)
-        return Z @ np.asarray(theta2, dtype=np.float32)
+        C = theta1.shape[0]
+        cols = []
+        for c in range(C):
+            Z = X @ np.asarray(theta1[c], dtype=np.float32)  # (B, m)
+            Z = np.maximum(Z, 0.0)
+            cols.append(Z @ np.asarray(theta2[c], dtype=np.float32))  # (B,)
+        return np.stack(cols, axis=1)  # (B, C)
 
 
 def _random_cvxnn_head_artifact(path: Path, dims: int, n_classes: int, seed: int = 0, hidden: int = 64) -> None:
     rng = np.random.default_rng(seed)
-    theta1 = (rng.standard_normal((dims, hidden), dtype=np.float32) * 0.02).astype(np.float32)
-    theta2 = (rng.standard_normal((hidden, n_classes), dtype=np.float32) * 0.02).astype(np.float32)
+    theta1 = (rng.standard_normal((n_classes, dims, hidden), dtype=np.float32) * 0.02).astype(np.float32)
+    theta2 = (rng.standard_normal((n_classes, hidden), dtype=np.float32) * 0.02).astype(np.float32)
     head = _RandomCVXHead(theta1=theta1, theta2=theta2)
     with open(path, "wb") as f:
         pickle.dump(head, f)
